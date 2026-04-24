@@ -10,6 +10,7 @@ Each skill is a self-contained workflow that Claude Code loads on demand when yo
 |-------|-------------|
 | [beamer](beamer/) | Generate LaTeX Beamer slide decks with TikZ figures and a four-step compile-audit-fix cycle |
 | [slides-content](slides-content/) | End-to-end pipeline: source document (PDF, markdown, text) to compiled presentation slides |
+| [diagram-pdf](diagram-pdf/) | Generate standalone TikZ diagrams (pipelines, hierarchies, cycles, hub-and-spoke, thematic) compiled to PDF, with an independent audit agent |
 
 ### Analysis
 

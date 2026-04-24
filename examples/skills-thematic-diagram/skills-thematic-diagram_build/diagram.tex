@@ -1,0 +1,87 @@
+\documentclass[border=16pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathreplacing,shapes.geometric,fit}
+
+\begin{document}
+
+\definecolor{SlateNavy}{HTML}{1B2A4A}
+\definecolor{DeepTeal}{HTML}{0D7377}
+\definecolor{CyanBlue}{HTML}{0077B6}
+\definecolor{DustyPlum}{HTML}{9B5978}
+\definecolor{BurntOrange}{HTML}{BF5700}
+\definecolor{WarmAmber}{HTML}{E8913A}
+\definecolor{AccentGreen}{HTML}{27AE60}
+\definecolor{AccentRed}{HTML}{C0392B}
+\definecolor{MedGray}{HTML}{B0AFA8}
+\definecolor{CharText}{HTML}{3A3A3A}
+\definecolor{PaleBlue}{HTML}{E8F0F8}
+\definecolor{LightGray}{HTML}{F0EFEC}
+
+\begin{tikzpicture}[
+    themeheader/.style={
+        draw=#1, fill=#1, text=white,
+        rounded corners=4pt, minimum width=5.5cm, minimum height=0.9cm,
+        align=center, font=\sffamily\small\bfseries, inner sep=5pt
+    },
+    themebody/.style={
+        draw=#1, fill=#1!8, text=CharText,
+        rounded corners=4pt, minimum width=5.5cm, minimum height=3.5cm,
+        align=left, font=\sffamily\footnotesize, inner sep=7pt,
+        text width=5.0cm, anchor=north
+    },
+    thesisnode/.style={
+        draw=SlateNavy, fill=SlateNavy!10, text=SlateNavy,
+        rounded corners=6pt, minimum width=8.5cm, minimum height=2.0cm,
+        align=center, font=\sffamily\small\bfseries,
+        inner sep=8pt, very thick
+    },
+    spoke/.style={
+        draw=MedGray, thick
+    }
+]
+
+% Top-left cluster: Content Creation (SlateNavy)
+\node[themeheader=SlateNavy] (h1) at (-4.8,6.0) {Content Creation};
+\node[themebody=SlateNavy] (b1) at (h1.south) {%
+\textbf{beamer}\\LaTeX Beamer slide decks with TikZ figures\\[3pt]
+\textbf{slides-content}\\Document-to-presentation pipeline\\[3pt]
+\textbf{diagram-pdf}\\Standalone TikZ diagrams to PDF};
+
+% Top-right cluster: Analysis (DeepTeal)
+\node[themeheader=DeepTeal] (h2) at (4.8,6.0) {Analysis};
+\node[themebody=DeepTeal] (b2) at (h2.south) {%
+\textbf{ai-council}\\Five-advisor deliberation on decisions\\[3pt]
+\textbf{analyze-reply}\\Fact-check content, draft a reply in your voice};
+
+% Central hub
+\node[thesisnode] (hub) at (0,0) {%
+{\Large AI Business Tools}\\[4pt]
+{\footnotesize\mdseries github.com/AI-Business-Tools/AIBusinessTools}};
+
+% Bottom-left cluster: Knowledge Management (CyanBlue)
+\node[themeheader=CyanBlue] (h3) at (-4.8,-2.5) {Knowledge Management};
+\node[themebody=CyanBlue] (b3) at (h3.south) {%
+\textbf{split-pdf}\\Deeply read academic PDFs in chunks\\[3pt]
+\textbf{knowledge-base}\\Index, summarize, and query a document library};
+
+% Bottom-right cluster: Process Guides (DustyPlum)
+\node[themeheader=DustyPlum] (h4) at (4.8,-2.5) {Process Guides};
+\node[themebody=DustyPlum] (b4) at (h4.south) {%
+\textbf{writing-voice-guide}\\Build a consistent writing voice layer\\[3pt]
+\textbf{handoff-resume}\\Session continuity across Claude Code sessions};
+
+% Invisible fit nodes for clean spoke routing (each wraps a full cluster)
+\node[draw=none,fit=(h1)(b1),inner sep=0pt] (c1) {};
+\node[draw=none,fit=(h2)(b2),inner sep=0pt] (c2) {};
+\node[draw=none,fit=(h3)(b3),inner sep=0pt] (c3) {};
+\node[draw=none,fit=(h4)(b4),inner sep=0pt] (c4) {};
+
+% Spokes from hub to each cluster
+\draw[spoke] (hub) -- (c1);
+\draw[spoke] (hub) -- (c2);
+\draw[spoke] (hub) -- (c3);
+\draw[spoke] (hub) -- (c4);
+
+\end{tikzpicture}
+
+\end{document}

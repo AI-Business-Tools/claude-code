@@ -56,6 +56,8 @@ Every checkpoint accepts `skip`, `ok`, `proceed`, or empty reply. Bail out whene
 
 **Default to full re-run at Checkpoint 3.** Earlier versions offered a "chairman re-synthesis only" option for new context. Users reported it produced an "appendix" feel: the new context was acknowledged but not actually integrated into how each advisor thinks. Removed in favor of full re-run as the default.
 
+**Explicit approval before Round 2 dispatch.** If the user's re-run clarification implies edits to the source artifact rather than just additional framing context, the parent renders the revised version inline and waits for explicit approval before dispatching. A bare option choice is not sufficient approval for revisions the parent authored on the user's behalf.
+
 **Two-round cap is a feature.** Past two iterations, sessions diverge instead of converge. The cap forces a decision: ship the current verdict or start a fresh council with the cumulative context.
 
 **Deterministic anonymization seed.** Round-to-round diffing is meaningful only if the same advisor maps to the same response letter across rounds. Peer reviewers are still blind by construction (fresh sub-agents each round), so the integrity of peer judgment does not change.
@@ -75,11 +77,17 @@ Good questions for the deep council:
 - "We think we need X. Is that actually the question we should be asking?"
 - "Pressure-test this position paper before I send it to the board."
 
-Not good questions for the deep council:
-- Reversible, low-stakes pressure-tests (use `ai-council` instead)
-- Factual lookups with a single correct answer
-- Content creation tasks ("write me a tweet")
-- Simple summarization or processing tasks
+When NOT to use this skill:
+
+- **Time-sensitive decisions (hours, not days).** A deep council costs roughly 11 sub-agent calls per round and up to 25 across two rounds. Use the fast `ai-council` instead.
+- **First drafts.** The council evaluates something coherent enough to peer-review. Write the draft first, then bring it back.
+- **Late-stage editing (typos, formatting, line edits).** Advisors rebuild what does not need rebuilding.
+- **Highly technical artifacts where domain expertise dominates** (legal contracts, compliance filings, technical specs, code). General-purpose advisor archetypes produce non-expert critique.
+- **Hard length-constrained pieces** (haiku, tweet, headline, slide title). Advisors restructure beyond the constraint.
+- **Highly emotional or interpersonal communications** (apologies, condolences, family disputes). Advisors handle frame and structure, not emotional register.
+- **Decisions already made, where you want validation.** The skill is for genuine deliberation. If your mind is made up, it produces frustration rather than insight.
+- **Single-shot creative writing where voice is the product** (poems, fiction passages). Advisors diagnose structure and overwhelm voice.
+- **Trivial questions with one right answer** or simple summarization tasks.
 
 Rule of thumb: if "I'll just re-run if it's wrong" feels fine, use `ai-council`. Otherwise, use this skill.
 

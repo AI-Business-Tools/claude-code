@@ -28,6 +28,24 @@ If a user invokes this skill for a trivial question, tell them so and offer to s
 
 ---
 
+## When NOT to use this skill
+
+A deep council costs roughly 11 sub-agent calls per round (5 advisors + 5 peer reviewers + chairman) and up to 25 across two rounds. The interactive design also assumes there is a meaningful question to deliberate on. Several input types waste that cost or actively misuse the format. If the user invokes the skill on one of these, surface the mismatch in Phase 0 before proceeding.
+
+- **Time-sensitive decisions (hours, not days).** Use the fast `ai-council` instead.
+- **First drafts.** The council evaluates something coherent enough to peer-review. Help the user write the draft first, then bring it back.
+- **Late-stage editing (typos, formatting, line edits).** Advisors rebuild what does not need rebuilding. Use direct edits instead.
+- **Highly technical artifacts where domain expertise dominates** (legal contracts, compliance filings, technical specs, code). General-purpose advisor archetypes produce non-expert critique.
+- **Hard length-constrained pieces** (haiku, tweet, headline, slide title). Advisors restructure beyond the constraint.
+- **Highly emotional or interpersonal communications** (apologies, condolences, family disputes). Advisors handle frame and structure, not emotional register.
+- **Decisions already made, where the user wants validation.** The skill is for genuine deliberation. If the user's mind is made up, it produces frustration rather than insight.
+- **Single-shot creative writing where voice is the product** (poems, fiction passages). Advisors diagnose structure and overwhelm voice.
+- **Trivial questions with one right answer.** Answer directly.
+
+When the input matches one of these, tell the user which category seems to match, offer the right alternative, and wait for confirmation before proceeding.
+
+---
+
 ## Integration with other analysis tools
 
 Workflow positioning (same options as `ai-council`):
@@ -113,6 +131,16 @@ Do not spend more than 30 seconds. Reframe the user's raw question as a clear, n
 Do not add your own opinion or steer the framing. If the question is too vague ("council this: my business"), ask one clarifying question, just one, then proceed.
 
 Save the framed question as `framed_question.md` in the session folder.
+
+### Sanity-check input fit
+
+After framing, check whether the input matches a category from "When NOT to use this skill." If it does:
+
+- Name the category that seems to match.
+- Offer the right alternative (fast council, write a draft first, edit directly, answer the question without convening, etc.).
+- Wait for explicit confirmation before proceeding to Phase 0.5 or Checkpoint 1.
+
+Do not refuse outright; the user may have a reason for invoking the deep council on an unusual input. The goal is to surface the mismatch before spending advisor cycles on a poor fit.
 
 ### Output paths
 
@@ -286,6 +314,18 @@ Default: do not show the full first-pass analyses unless the user picks option 4
 - **Show analyses:** render the five `advisor_<n>_first_pass.md` files inline, then re-render the assumption summary and menu. No state change, no extra cost beyond the render.
 - **Unclear or correction without explicit scope:** treat as full redraft. Ambiguity means the correction likely affects more than one advisor.
 
+### When to interpret a correction as targeted vs. full
+
+A correction without explicit "targeted:" scope defaults to **full redraft.** The same misread usually lives latently in advisors who did not voice it.
+
+**Interpret as targeted only when all of these hold:**
+
+1. The correction maps to a critique that 1-2 advisors made load-bearing (visible in the per-advisor assumption view).
+2. Other advisors either accepted the same constraint already or addressed a different dimension entirely.
+3. The corrected assumption is not in the shared-assumptions view.
+
+When any of these is unclear, default to full. The token cost of one extra full redraft is modest compared to a chairman synthesizing on stale advisor responses.
+
 Save redrafted responses as `advisor_<n>_second_pass.md`. Use second-pass responses (or first-pass if no redraft) for peer review.
 
 Update `session_state.json` (`last_completed_phase: 4`).
@@ -433,6 +473,24 @@ Up to 2 re-run rounds before the council closes. (Current round: [N] of 2.)
 - **Unclear:** ask once whether full or targeted re-run. Default to full if still ambiguous.
 
 **Hard cap:** 2 re-run rounds total. After round 2: "Council has concluded at the 2-round cap. Ship the current verdict, or start a fresh council session if you want to go further."
+
+### Before Round 2 dispatch: explicit revision approval
+
+If the user's re-run clarification implies edits to the source artifact (memo, proposal, draft) rather than just additional framing context, do not dispatch Round 2 silently. The user may be approving the *idea* of a re-run while the parent's revisions go beyond their intent.
+
+- **Clarification adds context only** (e.g., "audience is more technical than you assumed"): dispatch directly.
+- **Clarification implies artifact edits** (e.g., "agree about X, add Y, fix Z"): produce the revised artifact, render it inline, and ask: "Round 2 will run on this revised version. Proceed, adjust, or revert?" Wait for explicit approval. A bare number choice ("2") is not sufficient approval for revisions the parent authored.
+
+This prevents the parent's interpretation of the user's intent from propagating silently into Round 2.
+
+### When the user's response is a mixed message
+
+The user may reply with both an explanation request and an edit or re-run instruction in the same message ("Explain why X, but also do Y"). Do not silently execute both.
+
+- **Independent explanation + edit** (e.g., explain three points + add a placeholder): execute the edit, render it, then explain the requested points, then re-prompt the Checkpoint 3 menu. State explicitly which actions you took and in what order.
+- **Conflicting or interacting** (e.g., explain why X is recommended + change X): explain first, then re-prompt the menu without executing the edit. The user may revise the instruction once they understand.
+
+The point is to keep the user's intent visible.
 
 ### Why no chairman-only re-synthesis option
 

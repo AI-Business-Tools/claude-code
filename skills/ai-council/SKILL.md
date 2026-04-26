@@ -14,6 +14,14 @@ This is adapted from Andrej Karpathy's LLM Council: dispatch queries to multiple
 
 ---
 
+## When to switch to the deep variant
+
+For high-stakes decisions (term sheets, pivots, pre-publication strategy memos) or when the framing of the question itself is unclear, use [`ai-council-deep`](../ai-council-deep/) instead. It runs the same five advisors and anonymous peer review, but adds three user-in-the-loop checkpoints: the parent asks five clarifying questions before dispatching advisors, advisors surface their load-bearing assumptions for the user to correct before peer review, and the user can request up to two full re-runs after the chairman's synthesis. Slower (10 to 60 minutes vs about 2), but catches the "one bad assumption poisons all five advisors" failure mode that the fast council cannot.
+
+Triggers: `deep council`, `interactive council`, `high-stakes council`. Rule of thumb: if "I'll just re-run if it's wrong" feels fine, use this fast skill. Otherwise, use the deep variant.
+
+---
+
 ## When to run the council (and when not to)
 
 The council is for questions where being wrong is expensive and multiple perspectives add real value.

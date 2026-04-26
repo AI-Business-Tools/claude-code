@@ -17,6 +17,7 @@ Each skill is a self-contained workflow that Claude Code loads on demand when yo
 | Skill | What It Does |
 |-------|-------------|
 | [ai-council](ai-council/) | Pressure-test a decision or argument through a structured five-advisor deliberation |
+| [ai-council-deep](ai-council-deep/) | Interactive variant of ai-council with three user checkpoints for high-stakes decisions such as term sheet evaluation and choosing between strategic pivots |
 | [analyze-reply](analyze-reply/) | Fact-check a forwarded article, essay, or email, then draft a reply in your voice |
 
 ### Knowledge Management

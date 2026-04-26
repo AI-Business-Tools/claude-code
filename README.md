@@ -54,6 +54,7 @@ See [methodology.md](methodology.md) for the full design rationale.
 | [slides-content](skills/slides-content/) | End-to-end: source content to compiled slides to PPTX | PDF, markdown, or text input; presentation output |
 | [knowledge-base](skills/knowledge-base/) | Process, index, summarize, and query documents | Personal knowledge management pipeline |
 | [ai-council](skills/ai-council/) | Five-advisor council with anonymous peer review | Pressure-test decisions with structured deliberation |
+| [ai-council-deep](skills/ai-council-deep/) | Interactive variant with three user-in-the-loop checkpoints | High-stakes decisions: term sheets, pivots, pre-publication strategy memos |
 | [writing-voice-guide](skills/writing-voice-guide/) | How to create your own writing voice layer | Process guide, not a skill file |
 | [handoff-resume](skills/handoff-resume/) | Session continuity: structured handoffs and context reconstruction | Protocol for multi-session projects |
 
@@ -71,6 +72,7 @@ Several skills in this repository build on work by others:
 - **Scott Cunningham**, Professor of Economics, Baylor University. `split-pdf` and the Beamer slide generation approach originated in his [MixtapeTools](https://github.com/scunning1975/MixtapeTools) repository. [LinkedIn](https://www.linkedin.com/in/scott-cunningham-7788912/)
 - **John Graff**, Assistant Professor of Instruction, UT Austin McCombs School of Business. The AI Council methodology is adapted from his original LLM Council skill. [LinkedIn](http://linkedin.com/in/johnmgraff/)
 - **Andrej Karpathy**, Founder, Eureka Labs. The knowledge base pipeline draws on his approach to personal knowledge management. [GitHub](https://github.com/karpathy)
+- **Freddy Gottesman**, GHP Labs. The `ai-council-deep` interactive variant adds three user-in-the-loop checkpoints (clarify, surface assumptions, iterate) to the AI Council methodology. [LinkedIn](https://www.linkedin.com/in/fgottesman/) | [GHP Labs](https://ghplabs.ai/)
 
 ## License
 

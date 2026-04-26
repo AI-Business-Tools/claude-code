@@ -56,6 +56,8 @@ Not good questions for the council:
 
 The skill can run standalone or after a prior fact-checking or analysis pass. When running after a prior analysis, include that analysis as context so advisors build on it rather than repeat it.
 
+For high-stakes decisions where one wrong assumption can poison the whole council, see the [`ai-council-deep`](../ai-council-deep/) sibling skill. It adds three user-in-the-loop checkpoints (clarify, surface assumptions, iterate) on top of the same five advisors and anonymous peer review.
+
 ## Output
 
 Every council session produces two files in the workspace:

@@ -1,1 +1,13 @@
 .DS_Store
+
+# LaTeX intermediates
+*.aux
+*.log
+*.nav
+*.snm
+*.toc
+*.out
+*.synctex.gz
+
+# Timestamped backups (filename YYYY-MM-DD-HHMMSS.ext)
+* [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9].*

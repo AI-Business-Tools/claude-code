@@ -1,4 +1,4 @@
-# AIBusinessTools
+# Claude Code
 
 Claude Code skills for business professionals and educators.
 

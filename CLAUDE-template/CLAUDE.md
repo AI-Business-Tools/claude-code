@@ -89,7 +89,7 @@ The user is **[YOUR NAME]**. All first-person references (I, me, my) refer to [Y
 ## Handoff Protocol
 
 <!-- Handoffs carry project context across sessions. When you end a session, write a handoff. When you start the next session, type "resume" to reload state. -->
-<!-- For the full protocol, see: https://github.com/AI-Business-Tools/AIBusinessTools/tree/main/skills/handoff-resume -->
+<!-- For the full protocol, see: https://github.com/AI-Business-Tools/claude-code/tree/main/skills/handoff-resume -->
 
 **Trigger:** When you say "write a handoff," write a handoff entry to `CLAUDE.local.md` in the working directory.
 

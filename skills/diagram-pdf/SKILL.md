@@ -1,28 +1,8 @@
 ---
 name: diagram-pdf
 description: Generate standalone TikZ diagrams (pipelines, hierarchies, cycles, hub-and-spoke, thematic) compiled to PDF, with a mandatory independent audit agent that catches overlap and routing defects before delivery.
-triggers:
-  - "create a diagram"
-  - "diagram this"
-  - "workflow diagram"
-  - "draw a diagram"
-  - "visualize this workflow"
-  - "diagram the themes"
-  - "thematic diagram"
-  - "concept map"
-  - "org chart"
-  - "process diagram"
-  - "map the themes"
-  - "visualize key themes"
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - Glob
-  - Grep
-  - Agent
-  - Skill
+triggers: create a diagram, diagram this, workflow diagram, draw a diagram, visualize this workflow, diagram the themes, thematic diagram, concept map, org chart, process diagram, map the themes, visualize key themes
+allowed-tools: Bash(pdflatex*), Bash(mkdir*), Bash(ls*), Bash(cp*), Bash(mv*), Bash(rm*), Bash(cd*), Bash(which*), Read, Write, Edit, Glob, Grep, Agent
 ---
 
 # Diagram Generation

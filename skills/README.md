@@ -1,6 +1,6 @@
 # Skills Catalog
 
-Each skill is a self-contained workflow that Claude Code loads on demand when your request matches its triggers. Install a skill by copying its `SKILL.md` into `~/.claude/skills/<skill-name>/SKILL.md`.
+Each skill is a self-contained workflow that Claude Code loads on demand when your request matches its triggers. Most skills install by copying `SKILL.md` into `~/.claude/skills/<skill-name>/SKILL.md`. Two skills in this catalog install differently and are flagged below: `writing-voice-guide` (a process guide; follow the README) and `handoff-resume` (paste `protocol.md` into your `CLAUDE.md`). Each skill's README has its own Installation section with the exact steps.
 
 ## Available Skills
 
@@ -26,6 +26,7 @@ Each skill is a self-contained workflow that Claude Code loads on demand when yo
 |-------|-------------|
 | [split-pdf](split-pdf/) | Split and deeply read academic PDFs in 4-page chunks to avoid shallow comprehension |
 | [knowledge-base](knowledge-base/) | Process, index, summarize, and query a personal document library |
+| [kb-update](kb-update/) | Sync the knowledge-base index with disk; run a periodic health check |
 
 ### Process Guides
 

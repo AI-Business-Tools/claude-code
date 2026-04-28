@@ -72,7 +72,7 @@ Examples:
 - `A large-scale investigation of everyday moral dilemmas. 2025-05-13.pdf` → `<content_name>` = `A large-scale investigation of everyday moral dilemmas. 2025-05-13`
 - User says "call it moral_dilemmas" → `<content_name>` = `moral_dilemmas`
 
-All deliverables use `<content_name>` as their prefix: `<content_name>_summary.md`, `<content_name>_slides.pdf`, `<content_name>.pptx`. The build directory is `<foldername>_build/` (named after the output folder, not the source file).
+All deliverables use `<content_name>` as their prefix: `<content_name>_summary.md`, `<content_name>_slides.pdf`, `<content_name>.pptx`. The build directory is `<content_name>_build/` (named after the document, sitting inside the per-document output directory).
 
 ### Determine the output directory
 
@@ -120,18 +120,18 @@ The output directory is a **per-document subfolder** named `<content_name>/` ins
 
 ### If the input is a PDF
 
-First check for existing splits before splitting. Look for `<foldername>_build/split_<content_name>/` in the output directory. If it exists and contains `.pdf` files, ask:
+First check for existing splits before splitting. Look for `<content_name>_build/split_<content_name>/` in the output directory. If it exists and contains `.pdf` files, ask:
 > "Splits already exist for `<content_name>` (N chunks). Reuse existing splits, or re-split from scratch?"
 - **Reuse**: skip splitting, use the existing files, and proceed to deep-read below
 - **Re-split**: delete the split folder and proceed with splitting below
 
-Split the PDF into 4-page chunks using split-pdf's Python splitting script. Store splits in `<foldername>_build/split_<content_name>/`.
+Split the PDF into 4-page chunks using split-pdf's Python splitting script. Store splits in `<content_name>_build/split_<content_name>/`.
 
 See `../split-pdf/SKILL.md` for the full splitting procedure and Agent Isolation Protocol.
 
 **Read the splits in a subagent** per split-pdf's Agent Isolation Protocol. Launch an Agent to read all splits (3 at a time) and write `notes.md` in the build subdirectory. The agent prompt should specify:
 - The split directory path and ordered file list
-- Notes output path: `<foldername>_build/notes.md`
+- Notes output path: `<content_name>_build/notes.md`
 - Extraction dimensions: research question, audience, method, data (sources, sample, period), statistical methods, findings, contributions, replication feasibility
 - No pause between batches
 
@@ -141,7 +141,7 @@ After the agent completes, read `notes.md` (plain text) in the parent conversati
 
 ### If the input is not a PDF (.md, .txt, .tex, .docx, .doc, .rtf)
 
-Skip splitting. Create the build directory (`<foldername>_build/`) if it does not already exist, then read the file directly:
+Skip splitting. Create the build directory (`<content_name>_build/`) if it does not already exist, then read the file directly:
 - For `.md`, `.txt`, and `.tex`: read the file contents using the Read tool
 - For `.docx`, `.doc`, `.rtf`: extract text using macOS built-in `textutil -convert txt "<file_path>" -output "<build_dir>/extracted.txt"`, then read the extracted text file
 

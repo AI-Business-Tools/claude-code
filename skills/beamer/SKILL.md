@@ -2,7 +2,7 @@
 name: beamer
 description: Beamer slide generation with code-first figures, outline checkpoint, audience-aware rhetoric, Devil's Advocate slides, code blocks, and transition slides. Adapted from Scott Cunningham's beautiful_deck approach.
 triggers: beamer, beamer slides, deck
-allowed-tools: Bash(pdflatex*), Bash(xelatex*), Bash(lualatex*), Bash(latexmk*), Bash(bibtex*), Bash(biber*), Bash(python*), Bash(pip*), Bash(pdftoppm*), Bash(cd*), Bash(mkdir*), Bash(ls*), Bash(cp*), Bash(mv*), Bash(rm*), Bash(which*), Bash(type*), Bash(kpsewhich*), Bash(tlmgr*), Bash(texhash*), Bash(mactex*), Bash(mktexlsr*), Bash(fmtutil*), Bash(updmap*), Bash(brew*), Bash(find*), Bash(system_profiler*), Bash(fc-list*), Bash(sudo*), Bash(eval*), Bash(export*), Bash(cat*), Bash(grep*), Bash(head*), Bash(tail*), Bash(wc*), Read, Write, Edit, Glob, Grep, Task, Agent
+allowed-tools: Bash(pdflatex*), Bash(xelatex*), Bash(lualatex*), Bash(latexmk*), Bash(bibtex*), Bash(biber*), Bash(python*), Bash(pip*), Bash(pdftoppm*), Bash(cd*), Bash(mkdir*), Bash(ls*), Bash(cp*), Bash(mv*), Bash(rm*), Bash(which*), Bash(type*), Bash(kpsewhich*), Bash(tlmgr*), Bash(texhash*), Bash(mactex*), Bash(mktexlsr*), Bash(fmtutil*), Bash(updmap*), Bash(brew*), Bash(find*), Bash(system_profiler*), Bash(fc-list*), Bash(eval*), Bash(export*), Bash(cat*), Bash(grep*), Bash(head*), Bash(tail*), Bash(wc*), Read, Write, Edit, Glob, Grep, Agent
 argument-hint: [content-notes-or-summary] [audience=teaching|faculty|professional|consulting|working]
 ---
 
@@ -118,7 +118,7 @@ Apply the audience-specific guidelines from the matched pattern throughout all s
 
 **First action: use the Read tool to read these four files now, in order:**
 
-1. `../../style-guides/writing-voice-guide.md` (or equivalent) -- slide-specific tone rules (factual titles, no over-narration, no selling the session, takeaway discipline)
+1. `../writing-voice-guide/README.md` (or equivalent) -- guidance on creating a writing voice layer; slide-specific tone rules (factual titles, no over-narration, no selling the session, takeaway discipline)
 2. `../../style-guides/beamer/style-guide.md` -- visual design: colors, fonts, templates, macros, chart styling, TikZ patterns, table formatting, slide type patterns, and the complete LaTeX preamble to copy verbatim from its Quick Reference section
 3. `audit-checklist.md` (in this skill's directory) -- the quality audit checklist used in Step 3
 4. `domain_patterns.md` (in this skill's directory) -- audience-specific guidelines for the active pattern

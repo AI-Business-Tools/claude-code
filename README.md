@@ -42,7 +42,7 @@ See [methodology.md](methodology.md) for the full design rationale.
 
 1. **Install Claude Code** from [Anthropic](https://docs.anthropic.com/en/docs/claude-code)
 2. **Copy the template**: start with [CLAUDE-template/CLAUDE.md](CLAUDE-template/CLAUDE.md) and customize it for your identity, writing standards, and workflow
-3. **Install skills**: copy any skill's `SKILL.md` into `~/.claude/skills/<skill-name>/SKILL.md`
+3. **Install skills**: most skills install by copying `SKILL.md` into `~/.claude/skills/<skill-name>/SKILL.md`. Two skills install differently: `writing-voice-guide` is a process guide (read its `README.md` and follow the steps to build your own voice skill), and `handoff-resume` installs by pasting `protocol.md` content into your `CLAUDE.md`. Each skill's README documents its own install steps.
 4. **Start working**: skills activate automatically when your request matches their triggers
 
 ## Skills
@@ -55,6 +55,8 @@ See [methodology.md](methodology.md) for the full design rationale.
 | [knowledge-base](skills/knowledge-base/) | Process, index, summarize, and query documents | Personal knowledge management pipeline |
 | [ai-council](skills/ai-council/) | Five-advisor council with anonymous peer review | Pressure-test decisions with structured deliberation |
 | [ai-council-deep](skills/ai-council-deep/) | Interactive variant with three user-in-the-loop checkpoints | High-stakes decisions: term sheets, pivots, pre-publication strategy memos |
+| [analyze-reply](skills/analyze-reply/) | Fact-check a forwarded article, essay, or email and draft a reply in your voice | Pairs with a writing voice layer |
+| [diagram-pdf](skills/diagram-pdf/) | Generate standalone TikZ diagrams (pipelines, hierarchies, cycles, hub-and-spoke, thematic) | Independent audit agent verifies layout |
 | [writing-voice-guide](skills/writing-voice-guide/) | How to create your own writing voice layer | Process guide, not a skill file |
 | [handoff-resume](skills/handoff-resume/) | Session continuity: structured handoffs and context reconstruction | Protocol for multi-session projects |
 

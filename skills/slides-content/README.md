@@ -104,3 +104,13 @@ A separate academic summary skill and general summary skill are referenced in St
 | `<content_name>.pptx` | output directory | Native PowerPoint (optional, generated in Step 4) |
 | `notes.md` | build subdirectory | Deep-reading extraction notes (working file) |
 | `slides.tex` | build subdirectory | Beamer LaTeX source (working file) |
+
+## Installation
+
+1. Copy `SKILL.md` into `~/.claude/skills/slides-content/SKILL.md`.
+2. Install the three skills this skill calls in sequence: `split-pdf`, `beamer`, and the `style-guides/pptx/` style guide. Each has its own install steps in its README.
+3. Confirm Python and TeX Live are available on your `PATH` (used by `split-pdf` and `beamer` respectively).
+4. Restart Claude Code (or run `/skills` to reload).
+5. Trigger by saying "make slides from this paper," "turn this into a deck," or any other phrase listed under Usage.
+
+The skill expects a structured summary format in Step 2. The default summary skills referenced are not included in this repository; either substitute your own summary skill or adapt Step 2 to summarize directly using the extraction notes from `split-pdf`.

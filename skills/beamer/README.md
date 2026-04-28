@@ -132,6 +132,14 @@ The audit checklist in `audit-checklist.md` covers all style guide compliance ch
 
 ---
 
+## Installation
+
+1. Copy the entire `skills/beamer/` directory (which includes `SKILL.md`, `audit-checklist.md`, `domain_patterns.md`, and `figure_generation.md`) into `~/.claude/skills/beamer/`. All four files are needed; the audit checklist runs in the quality audit step, domain patterns drive audience triage, and figure generation guides matplotlib output.
+2. Install TeX Live (or MacTeX on macOS) so `pdflatex` is on your `PATH`. The skill checks for `pdflatex` at the start of every run and stops if it is missing. Install instructions for each OS are in `SKILL.md` Step 0.
+3. Copy `style-guides/beamer/style-guide.md` into the matching path on your system, or update the reference in `SKILL.md` to point at your own Beamer style guide.
+4. Restart Claude Code (or run `/skills` to reload).
+5. Trigger by saying "build a deck," "make a beamer presentation," or any other phrase listed under Usage.
+
 ## Acknowledgments
 
 The code-first figure generation approach, audience-aware rhetoric patterns, Devil's Advocate slides, and transition slide conventions in this skill are adapted from **Scott Cunningham's** `beautiful_deck` skill. Scott Cunningham is Professor of Economics, Baylor University, and the author of *Causal Inference: The Mixtape*. His original work is available in the [MixtapeTools](https://github.com/scunning1975/MixtapeTools) repository.

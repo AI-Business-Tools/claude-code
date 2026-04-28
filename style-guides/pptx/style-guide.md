@@ -2,6 +2,10 @@
 
 Apply this style guide when creating PowerPoint presentations. Follow all specifications exactly.
 
+## Note on Body-Text Color Across Media
+
+The accent palette in this style guide matches the Beamer style guide exactly. **Body text differs intentionally:** PPTX uses Charcoal `#4D4D4D`, while Beamer uses CharText `#3A3A3A` (slightly darker). The rationale: PowerPoint output is typically projected via screen-mirror or shared in PDF viewers where `#3A3A3A` reads as visually heavy on backlit displays; LaTeX-rendered PDFs are typically printed or viewed at higher contrast where `#3A3A3A` reads correctly. If you generate a deck via Beamer and later convert to PPTX (or vice versa), expect body text to shift slightly between the two outputs. This is by design.
+
 ## Critical Rules (Most-Violated, Read First)
 
 These five rules are violated in nearly every PPTX generation. They override any conflicting code example or default assumption elsewhere in this file.

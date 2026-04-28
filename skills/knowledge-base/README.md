@@ -80,6 +80,16 @@ The index row format:
 | 2026-03-18 | Ipeirotis | Scalable Oral Assessments Using Voice AI | AI-articles | Voice AI oral exams at $0.42/student with multi-model deliberation achieving alpha=0.86 |
 ```
 
+## Installation
+
+1. Copy `SKILL.md` into `~/.claude/skills/knowledge-base/SKILL.md`.
+2. Open `SKILL.md` and update the knowledge base root path (the `~/knowledge-base/` line near the top) to match where you want your knowledge base to live. Adjust the reserved-folder names (`aa-inbox/`, `aa-blog/`, `aa-recents/`) if you use different conventions.
+3. Adapt the references to summary skills (in the Process Inbox flow and the Integration with Other Skills section) to point at whichever summary skills you have installed, or adapt them to use your own summary format.
+4. Confirm Python 3 is on your `PATH` (used for PDF text extraction).
+5. (Optional) Install the companion [kb-update](../kb-update/) skill for periodic index sync and health checks.
+6. Restart Claude Code (or run `/skills` to reload).
+7. Trigger by saying "kb," "process inbox," "kb ask <question>," or any other phrase listed under Usage.
+
 ## Acknowledgments
 
 The knowledge base pipeline draws on **Andrej Karpathy's** approach to personal knowledge management. Karpathy, founder of Eureka Labs, has written and spoken about building personal systems that treat reading and research as structured, retrievable artifacts rather than ephemeral consumption. The citation-first naming convention and the agent-per-document architecture in this skill reflect that influence.

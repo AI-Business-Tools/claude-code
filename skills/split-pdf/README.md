@@ -68,6 +68,13 @@ After a complete read, the skill produces two files:
 
 The extract covers 8 dimensions: research question, audience, method, data (sources, sample size, time period, unit of observation), statistical methods, findings, contributions, and replication feasibility. It contains specific variable names, equation references, coefficient estimates, and standard errors, not a narrative summary.
 
+## Installation
+
+1. Copy `SKILL.md` into `~/.claude/skills/split-pdf/SKILL.md`.
+2. Install the PyPDF2 dependency: `pip install PyPDF2`.
+3. Restart Claude Code (or run `/skills` to reload).
+4. Trigger by saying "read this paper," "summarize this PDF," or by passing a path or search query directly: `/split-pdf <path-or-query>`.
+
 ## Acknowledgments
 
 The split-pdf approach originated in [MixtapeTools](https://github.com/scunning1975/MixtapeTools), a repository of research workflow utilities developed by **Scott Cunningham**, Professor of Economics, Baylor University. His work on practical tools for applied econometrics researchers informed the extraction schema and the batch-read discipline that this skill formalizes.

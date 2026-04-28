@@ -69,6 +69,15 @@ Every council session produces two files in the workspace:
 
 The HTML report is the primary deliverable: chairman verdict at the top, collapsible advisor sections, agreement/disagreement visual, and a footer with timestamp. The Markdown transcript preserves the full deliberation record, including the anonymization mapping, for sessions where you want to trace how each advisor's argument was received.
 
+## Installation
+
+1. Copy `SKILL.md` into `~/.claude/skills/ai-council/SKILL.md`.
+2. Confirm your environment has API access to the model providers the skill calls. Edit the model list in `SKILL.md` if you want a different lineup than the default.
+3. Restart Claude Code (or run `/skills` to reload).
+4. Trigger by saying "council this," "pressure-test this," or any other phrase listed under Usage.
+
+For deeper, interactive deliberation on high-stakes decisions, also install the [`ai-council-deep`](../ai-council-deep/) sibling skill.
+
 ## Acknowledgments
 
 The AI Council skill is adapted from an original LLM Council skill by **John Graff**, Assistant Professor of Instruction, UT Austin McCombs School of Business.

@@ -1,5 +1,5 @@
 ---
-name: kb-update
+name: knowledge-base-update
 description: Knowledge base sync and health check for the knowledge-base skill. Scans all topic folders for unindexed documents, removes index entries for missing files, refreshes topic descriptions, cleans up stale split directories, and reports health issues (missing summaries, naming inconsistencies, orphaned files, duplicate content).
 triggers: kb update, kb up, update kb, kb sync
 allowed-tools: Bash(python*), Bash(pip*), Bash(ls*), Bash(mv*), Bash(cp*), Bash(mkdir*), Bash(find*), Bash(wc*), Bash(file*), Read, Write, Edit, Glob, Grep, Agent

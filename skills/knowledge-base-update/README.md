@@ -1,6 +1,6 @@
 # Knowledge Base Update
 
-Companion skill to `knowledge-base`. Where `knowledge-base` processes one document at a time (the Process Inbox flow) or answers a question, `kb-update` sweeps the entire knowledge base and reconciles the index against what is actually on disk.
+Companion skill to `knowledge-base`. Where `knowledge-base` processes one document at a time (the Process Inbox flow) or answers a question, `knowledge-base-update` sweeps the entire knowledge base and reconciles the index against what is actually on disk.
 
 ## Problem
 
@@ -46,16 +46,16 @@ The skill never deletes source files and never overwrites summaries. It proposes
 
 ## Installation
 
-1. Copy `SKILL.md` into `~/.claude/skills/kb-update/SKILL.md`.
+1. Copy `SKILL.md` into `~/.claude/skills/knowledge-base-update/SKILL.md`.
 2. Open the file and replace the `<knowledge-base-root>` placeholder at the top with the actual path to your knowledge base (e.g., `~/knowledge-base/`). Adjust the directory pattern descriptions, naming convention, and skip-folder list to match your conventions.
 3. Restart Claude Code (or run `/skills` to reload).
 4. Trigger by saying "kb update" or any other listed trigger phrase.
 
-The `knowledge-base` skill is a soft prerequisite. `kb-update` does not call into it, but it assumes the same on-disk structure (topic folders, `_summary.md` and `_text.md` companion files, `index.md` and `topics.md` at the root). If you use the `knowledge-base` skill's defaults, no further customization is needed.
+The `knowledge-base` skill is a soft prerequisite. `knowledge-base-update` does not call into it, but it assumes the same on-disk structure (topic folders, `_summary.md` and `_text.md` companion files, `index.md` and `topics.md` at the root). If you use the `knowledge-base` skill's defaults, no further customization is needed.
 
 ## Output
 
-`kb-update` does not produce a deliverable file beyond the changes it makes to `index.md` and `topics.md` in your knowledge base. It produces an interactive report with sections:
+`knowledge-base-update` does not produce a deliverable file beyond the changes it makes to `index.md` and `topics.md` in your knowledge base. It produces an interactive report with sections:
 
 - **Sync summary:** N entries added, M entries removed, K folders refreshed in `topics.md`
 - **Stale build folders:** list of split directories cleaned up
@@ -65,7 +65,7 @@ The user is asked to confirm fixes before any moves or renames are applied.
 
 ## Design Rationale
 
-**Why a separate skill, not a flag on `knowledge-base`?** The skills are different in flow. `knowledge-base` is event-driven (a document arrives, process it; a question arrives, answer it). `kb-update` is sweep-driven (look at everything at once). Keeping them separate makes each easier to reason about and lets the user invoke maintenance independently of any specific document.
+**Why a separate skill, not a flag on `knowledge-base`?** The skills are different in flow. `knowledge-base` is event-driven (a document arrives, process it; a question arrives, answer it). `knowledge-base-update` is sweep-driven (look at everything at once). Keeping them separate makes each easier to reason about and lets the user invoke maintenance independently of any specific document.
 
 **Why never delete source files?** Files are user-curated artifacts. Even if a source has no summary and seems like a dead entry, it might be intentionally parked. The skill flags but does not act.
 

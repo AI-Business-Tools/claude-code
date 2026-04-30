@@ -1,6 +1,6 @@
 # Skills Catalog
 
-Each skill is a self-contained workflow that Claude Code loads on demand when your request matches its triggers. Most skills install by copying `SKILL.md` into `~/.claude/skills/<skill-name>/SKILL.md`. Two skills in this catalog install differently and are flagged below: `writing-voice-guide` (a process guide; follow the README) and `handoff-resume` (paste `protocol.md` into your `CLAUDE.md`). Each skill's README has its own Installation section with the exact steps.
+Each skill is a self-contained workflow that Claude Code loads on demand when your request matches its triggers. Most install by copying `SKILL.md` to `~/.claude/skills/<skill-name>/SKILL.md`; the two flagged exceptions install differently per their READMEs.
 
 ## Available Skills
 
@@ -17,7 +17,7 @@ Each skill is a self-contained workflow that Claude Code loads on demand when yo
 | Skill | What It Does |
 |-------|-------------|
 | [ai-council](ai-council/) | Pressure-test a decision or argument through a structured five-advisor deliberation |
-| [ai-council-deep](ai-council-deep/) | Interactive variant of ai-council with three user checkpoints for high-stakes decisions such as term sheet evaluation and choosing between strategic pivots |
+| [ai-council-deep](ai-council-deep/) | Interactive variant of ai-council with three user checkpoints for high-stakes decisions |
 | [analyze-reply](analyze-reply/) | Fact-check a forwarded article, essay, or email, then draft a reply in your voice |
 
 ### Knowledge Management
@@ -26,14 +26,14 @@ Each skill is a self-contained workflow that Claude Code loads on demand when yo
 |-------|-------------|
 | [split-pdf](split-pdf/) | Split and deeply read academic PDFs in 4-page chunks to avoid shallow comprehension |
 | [knowledge-base](knowledge-base/) | Process, index, summarize, and query a personal document library |
-| [kb-update](kb-update/) | Sync the knowledge-base index with disk; run a periodic health check |
+| [knowledge-base-update](knowledge-base-update/) | Sync the knowledge-base index with disk; run a periodic health check |
 
 ### Process Guides
 
 | Skill | What It Does |
 |-------|-------------|
-| [writing-voice-guide](writing-voice-guide/) | How to create a consistent writing voice layer for your AI environment (process guide, not a skill file) |
-| [handoff-resume](handoff-resume/) | Session continuity protocol for carrying project context across Claude Code sessions |
+| [writing-voice-guide](writing-voice-guide/) *(process guide)* | How to create a consistent writing voice layer for your AI environment |
+| [handoff-resume](handoff-resume/) *(protocol)* | Session continuity protocol for carrying project context across Claude Code sessions |
 
 ## Dependencies
 

@@ -61,13 +61,13 @@ knowledge-base/
 ├── aa-blog/                      <- Drop your own blog posts here for processing
 ├── AI-articles/                  <- Topic folders (create as needed)
 ├── AI-teaching/                  <-   names are examples, not a fixed list
-├── other-articles/               <-   the kb-update skill discovers all folders
+├── other-articles/               <-   the knowledge-base-update skill discovers all folders
 ├── index.md                      <- Auto-maintained document index
 ├── topics.md                     <- Auto-maintained topic descriptions
 └── kb.md                         <- How the system works (human-readable reference)
 ```
 
-**Topic folders are dynamic.** The skill does not maintain a hardcoded list. Any immediate subdirectory of `knowledge-base/` (other than `aa-inbox/`, `aa-blog/`, `aa-recents/`, and `*_build/`) is treated as a topic folder. Adding a new folder requires no skill or config changes; running the [kb-update](../kb-update/) skill will discover it automatically.
+**Topic folders are dynamic.** The skill does not maintain a hardcoded list. Any immediate subdirectory of `knowledge-base/` (other than `aa-inbox/`, `aa-blog/`, `aa-recents/`, and `*_build/`) is treated as a topic folder. Adding a new folder requires no skill or config changes; running the [knowledge-base-update](../knowledge-base-update/) skill will discover it automatically.
 
 **Conventions:**
 - Both patterns are valid; the index treats them identically.
@@ -399,7 +399,7 @@ AI in education: assessment, tutoring, pedagogy, and curriculum design. How AI c
 Non-AI articles on diverse topics. Overflow for content that does not fit a specific AI category.
 ```
 
-Updated by the [kb-update](../kb-update/) skill. The user's folder organization choices over time teach the system what belongs where.
+Updated by the [knowledge-base-update](../knowledge-base-update/) skill. The user's folder organization choices over time teach the system what belongs where.
 
 ## Integration with Other Skills
 
@@ -424,7 +424,7 @@ When any content skill (slides, summary, etc.) completes work inside the `knowle
 3. If not found, read the document's `_summary.md` and append an index entry.
 4. If found, no action needed.
 
-This is a lightweight check (read index, grep, optionally append one row). It does not require invoking the kb-update skill. Content skills should perform this check as a final step after writing their deliverables.
+This is a lightweight check (read index, grep, optionally append one row). It does not require invoking the knowledge-base-update skill. Content skills should perform this check as a final step after writing their deliverables.
 
 **Where to run content skills:** Run them directly in the topic folder where the document lives. Do not route through inbox for documents that are already organized. The skill creates its subfolder and build artifacts in place. The index-update hook ensures the index stays current regardless of where processing happens.
 
@@ -432,5 +432,5 @@ This is a lightweight check (read index, grep, optionally append one row). It do
 
 - **Never delete original source files.** The skill renames and moves but never deletes.
 - **Never overwrite extracts.** If an extract already exists, skip unless the user explicitly asks to regenerate.
-- **Index is append-only during processing.** Entries are only removed by the [kb-update](../kb-update/) skill when source files are confirmed missing.
+- **Index is append-only during processing.** Entries are only removed by the [knowledge-base-update](../knowledge-base-update/) skill when source files are confirmed missing.
 - **Topic folders are user-created.** The skill suggests new folders but waits for approval before creating them.

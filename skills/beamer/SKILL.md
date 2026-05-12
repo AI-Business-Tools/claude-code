@@ -160,11 +160,20 @@ Apply the audience-specific guidelines from the matched domain pattern throughou
 4. **Devil's Advocate slide:** Whether included or omitted, and why (per the active domain pattern's rules).
 5. **Source content inventory:** Enumerate every major table and figure cataloged in `notes.md` (or the source's text extract). For each item, decide one of three handlings and record a one-line reason:
    - **Render** — produce a slide that includes the magnitudes (numeric values, percentage points, coefficients). The reader sees the source's quantitative content.
-   - **Compress** — fold into a parent slide as a categorical or summarized treatment, deliberately dropping some magnitudes. Reason must be specific (for example, "the magnitude pattern is shown in Figure X already" or "audience does not need per-site detail").
+   - **Compress** (high bar; default is Render). Fold into a parent slide as a categorical or summarized treatment, deliberately dropping some magnitudes. Eligible only when another already-Rendered slide carries the same magnitude pattern. Two distinct findings (different magnitudes, different countries, different mechanisms, or different time periods) get two distinct slides; folding them into one is a defect, not an optimization. Reason must be specific (for example, "the magnitude pattern is shown in Figure X already" or "audience does not need per-site detail"). Forbidden patterns: folding findings about different countries with different magnitudes into one card-set slide; folding sector, location, occupation, and other mechanism findings into a single "no single pathway" slide when each has a distinct mechanism; folding a country exception into a parent slide as a footer when the exception itself has a distinct magnitude or mechanism.
    - **Drop** — omit entirely. Reason must be specific (for example, "robustness check that does not change the main finding" or "appendix-level methodological detail").
 
    Report a single inventory line such as: "Source content inventory: N tables/figures cataloged. M rendered, K compressed, L dropped." Then list each Compress and Drop decision with its one-line reason. Render decisions do not need individual reasons. The most common information-loss pattern in this skill is silently collapsing two information-dense tables (for example, a "rises" table and a "falls" table, each with per-row magnitudes) into one categorical slide that strips the magnitudes. Make these decisions explicit at outline time, not implicitly during slide writing. If a Compress or Drop reason reads as "for brevity" or "to fit the slide count," reconsider whether the content should be preserved as its own slide.
+
+   **Diagnostic signal (not a numerical floor):** if the final deck has fewer than 8 slides for an academic paper, working paper, long-form report, or whitepaper, suspect over-compression. The signal is "too few for the source," not "below a numerical floor"; if the source has only three distinct findings, the deck legitimately stays small. Inspect every Compress decision and restore any whose folded items have different magnitudes, countries, mechanisms, or time periods. Audit-time backstop is `audit-checklist.md` Deck-Level Checks.
 6. **Citation strategy recap:** Restate the decision from Step 0.6 (single-source or multi-source) and which slides, if any, carry overrides. This pins the strategy into the approved outline so it cannot drift during slide writing.
+7. **Text-column mechanism inventory:** for every content slide, declare the mechanism used in its text content. Add these lines to the inventory:
+   - Slide K text column: **itemize**, N parallel claims (default for 3+ parallel claims; use `\textbf{\color{DeepTeal}...}` or `\textbf{\color{SlateNavy}...}` lead-ins on the key facts).
+   - Slide K text column: **prose**, N paragraphs (only when content is genuinely narrative: story, scenario walkthrough, single argument with no parallel structure).
+   - Slide K text column: **TikZ card(s)**, N siblings (for visual cards using empty-box-plus-overlay; bullet content inside uses minipage+itemize per `audit-checklist.md` Box Text Anchoring #4).
+   - Slide K text column: **table**, N rows (for structured comparison data).
+
+   This declaration is the planning-time defense against the source-prose-to-slide-prose trap. If the source material (notes.md, summary.md) is written as prose, the slides do not inherit that style. Decompose source prose into discrete claims first, then pick the mechanism. A slide whose declared mechanism is "prose, 3+ paragraphs" with parallel claims is the defect class this step catches: most such slides should be itemize. Write-time enforcement lives in Step 1 (Column Content Invariant), audit-time backstop in `audit-checklist.md` Content Quality #11.
 
 Save the outline as `outline.md` in the build directory.
 
@@ -402,7 +411,41 @@ Always include both `width` and `height` with `keepaspectratio` for extracted fi
 If any check fails, report the violation to the user and ask how to proceed. Do not silently continue with a broken preamble.
 
 1. Write the complete `.tex` file, copying the preamble verbatim from the Quick Reference section of `../../style-guides/beamer/style-guide.md`.
-   - **TikZ overlay box constraint:** When using the empty-box-plus-overlay pattern (or any TikZ node with `minimum height` and separate text overlay), compute content height before writing the overlay content. Calculate `chars_per_line = (text_width - indent) / avg_char_width` (1.7mm for `\footnotesize`, 1.5mm for `\scriptsize`), write each item to fit within that count, then verify total content height < `minimum_height - top_shift`. If content does not fit, shorten text or increase box height; never rely on post-compilation visual inspection to catch overflow.
+   - **TikZ box invariant (width, height, list typography).** When using the empty-box-plus-overlay pattern (or any TikZ node with `minimum width` or `minimum height` and a separate text overlay), compute and verify all three properties *before* writing the overlay content.
+
+     **Width invariant (mandatory):** For every TikZ node with a `minimum width=Wcm` and an overlay node with `text width=Tcm` at the same anchor, the overlay must satisfy `T <= W - 2 * inner_sep`. At the style guide default `inner_sep=6pt` (about 0.21cm), this is `T <= W - 0.42cm`. Common settings: `minimum_width=4.4cm` requires `text_width <= 3.98cm`; `minimum_width=4.6cm` requires `text_width <= 4.18cm`. Violating this formula pushes the text overlay past the right edge of the box, which causes (a) systematic mid-word hyphenation as TeX tries to fit oversize lines, and (b) text fragments visibly extending past the box border. Both defects are guaranteed by the geometry, not random.
+
+     **Height invariant (mandatory):** Compute `chars_per_line = (text_width - indent) / avg_char_width` (1.7mm for `\footnotesize`, 1.5mm for `\scriptsize`, 1.9mm for `\small`), write each bullet or line item to fit within that count, then compute `total_content_height` per the procedure in the style guide under "Comparison / Category Boxes". Verify `total_content_height < minimum_height - top_shift`.
+
+     **List typography (mandatory):** If the node will contain three or more parallel items (bullet-like content), generate the `minipage` plus `itemize` form, not `\\`-separated segments. Three patterns are prohibited as content layouts inside TikZ nodes: manual bullet glyphs (`$\bullet$~Item one\\$\bullet$~Item two\\$\bullet$~Item three`), manual line breaks alone (`Item one\\Item two\\Item three`), and comma-separated grouped lines. All three produce flat stacked text with no hanging indent and no consistent inter-item spacing. Use this pattern instead: `\node{\begin{minipage}{Wcm}\setlength{\leftmargini}{1em}\begin{itemize}\setlength{\itemsep}{2pt}\item Item one \item Item two \item Item three\end{itemize}\end{minipage}};` where `Wcm` matches the node's `text width`. Two-or-fewer items may remain as inline prose. **Do not** use `\begin{itemize}[leftmargin=*]`: it requires `\usepackage{enumitem}` in the preamble, which silently overrides Beamer's bullet template and strips visible bullet glyphs from every itemize in the deck. This rule is parallel to `audit-checklist.md` Box Text Anchoring #4 and applies regardless of node width or height.
+
+     **If any invariant fails:** shorten the text, increase the box dimensions uniformly across sibling cards, change the list pattern, or change the visual mechanism. Never rely on post-compilation visual inspection to catch overflow. At PDF page resolution, 2-3mm of overflow is invisible and 5mm of horizontal text-past-box is hard to spot at thumbnail.
+
+     **Pre-write checklist:** for every TikZ node with `minimum width`, `minimum height`, and overlay content, write the arithmetic check as a comment in the `.tex` source above the node:
+
+     ```latex
+     % Width invariant: text_width(3.9cm) <= 4.4cm - 0.42cm = 3.98cm OK
+     % Height invariant: 7 content lines * 3.5mm + ~10mm overhead = 34.5mm < 48mm box OK
+     % List typography: 3+ items -> minipage+itemize OK   (or "2 items -> inline OK")
+     ```
+
+     The comment is for the audit agent and any future reader; it forces the generator to do the arithmetic before writing.
+   - **Column content invariant (mandatory).** Before writing the text column of any two-column slide (or any non-TikZ content block), count the parallel claims in the planned content. If three or more, write as `itemize` with `\textbf{\color{DeepTeal}...}` or `\textbf{\color{SlateNavy}...}` lead-ins on the key facts, not as `\vskip`-separated paragraphs. Prose is allowed only when the content is genuinely narrative (story, scenario walkthrough, single sustained argument where removing one sentence breaks the flow). Default: itemize.
+
+     **Source style is not slide style.** The `summary.md` or `notes.md` is prose. The slide is not. Decompose source prose into discrete claims, then bullet them. The source-prose-to-slide-prose trap is the most common content-design failure mode in this skill: source material is read as prose and transcribed as prose into slide columns when it should have been decomposed into bullets first. Planning-time defense lives in Step 0.7 (text-column mechanism inventory). Audit-time backstop is `audit-checklist.md` Content Quality #11. This invariant is the write-time defense between them.
+
+     **Pre-write comment requirement:** above every two-column slide's text column and every standalone non-TikZ content block, write the mechanism decision as a comment:
+
+     ```latex
+     % Mechanism: itemize, 4 parallel claims, DeepTeal lead-ins
+     \begin{column}{0.46\textwidth}
+       \begin{itemize}\setlength{\itemsep}{6pt}
+         \item \textbf{\color{DeepTeal}Key fact 1.} Supporting detail.
+         \item \textbf{\color{DeepTeal}Key fact 2.} Supporting detail.
+         \item ...
+     ```
+
+     The comment must match the Step 0.7 inventory declaration for that slide. If the inventory said "Slide K text column: itemize, 4 claims" and the writer is about to produce 4 prose paragraphs, the mismatch surfaces immediately.
 2. Compile with `pdflatex` at least twice. The `\sourcecite{}` macro uses `remember picture,overlay`, which requires two passes to stabilize absolute page coordinates. A single pass will produce incorrect citation placement on new or restructured slides. Always run: `pdflatex` (first pass, writes coordinates to `.aux`), then `pdflatex` (second pass, reads coordinates and places nodes correctly). Do not use lualatex or xelatex. The style guide's preamble uses pdflatex-compatible packages and is incompatible with lualatex's fontspec-based font loading. If you encounter a font error, fix it within pdflatex constraints rather than switching compilers.
 3. Run `bibtex`/`biber` if references are used, then add a third `pdflatex` pass.
 4. Recompile further if the log reports "Label(s) may have changed."
@@ -432,13 +475,33 @@ Recompile and verify all warnings are eliminated.
 
 After the deck compiles cleanly, perform a **comprehensive quality audit** of the final PDF and `.tex` source. This audit is not optional; it must happen every time. This single audit replaces the former three-agent pipeline (deck evaluation, graphics verification, quality audit) to avoid loading the full source into context three times.
 
-Launch **one audit agent** (using the Agent tool) with `subagent_type: general-purpose` and `model: sonnet`. The audit is rule-application against the published checklist; sonnet is sufficient and substantially cheaper than the opus tier. Do not use opus unless a prior sonnet audit on the same deck produced obvious errors (for example, missed a clear style-guide violation or invented findings).
+Launch **one audit agent** (using the Agent tool) with `subagent_type: general-purpose` and `model: opus`. The audit is rule-application against the published checklist, and the work is "scan every slide for every applicable pattern": exactly where sonnet has been observed to spot-check rather than exhaustively apply. Sonnet may be specified in the launcher only when the deck is small (under 10 slides) and has no TikZ boxes or charts.
 
 The agent reads these files before examining any slides:
 1. The **Beamer Style Guide** at `../../style-guides/beamer/style-guide.md`
 2. The **audit checklist** at `audit-checklist.md` (in this skill's directory)
 3. The full compiled PDF (all pages)
 4. The `.tex` source
+
+**Mandatory source-level grep checks (perform these before checklist application):**
+
+The audit agent must perform these specific source-level scans on `slides.tex` and report findings. Each scan corresponds to an audit-checklist rule that has been observed to be missed when the agent relied on visual inspection alone. The scans are pre-computed pattern matches; they are cheap and do not depend on visual judgment.
+
+1. **Automatic hyphenation in TikZ node body content.** Run `pdftotext -f 1 -l <N> -layout slides.pdf -` and scan the output for any line that ends with `-` immediately followed (on the next line) by a continuation fragment of the same word. Cross-reference against `slides.tex` to confirm the source did not contain an explicit hyphen. Every match is a defect per `audit-checklist.md` Hyphenation #3. Fix by adding `\hyphenpenalty=10000\exhyphenpenalty=10000\sloppy` to the affected node body, or by rewording.
+
+2. **TikZ box width formula compliance.** For every TikZ node with both `minimum width=Wcm` and a corresponding overlay node with `text width=Tcm` at the same anchor, verify `T <= W - 0.42` (where `0.42cm` is `2 * inner_sep` at the style guide default `inner_sep=6pt`). If `inner_sep` is set explicitly to a different value, substitute accordingly. Every violation is a defect per `audit-checklist.md` Content Quality #10. Fix by reducing `text_width` to satisfy the formula or by increasing `minimum_width` and the box spacing.
+
+3. **TikZ box height vs content height.** For every TikZ node using the empty-box-plus-overlay pattern, extract the box `minimum_height` and compute the total content height per the procedure in the style guide. Verify `total_content_height < minimum_height - top_shift`. Every violation is a defect per `audit-checklist.md` Content Quality #10. Fix by shortening the content or increasing the box height uniformly across sibling cards. **For sibling node groups:** identify every group of sibling TikZ nodes (multiple nodes positioned in a row or grid with the same style) and report the entire group when any one node fails, not just the offending node. Non-uniform expansion is the visible defect, so the fix must apply to all siblings.
+
+4. **Facilitator prompts outside teaching/lecture audiences.** When the active audience pattern is faculty, professional, consulting, or working, grep `slides.tex` for `\textit{Discuss:`, `\textit{Activity:`, `\textit{Reflect:`, `\textit{Think about:`, `\textit{Ask the room:`, and similar facilitator-prompt patterns. Every match is a defect per `audit-checklist.md` Deck-Level Checks #4. Skip this grep entirely when the active audience is teaching or lecture.
+
+5. **`\addlegendentry` math tokens.** Grep `slides.tex` for `\addlegendentry{[^}]*\$`. Every match is a defect: math symbols inside `\addlegendentry{...}` must be wrapped with `\ensuremath{token}`, never with `$token$`. Math-mode dollars inside legend labels corrupt pgfplots state when the legend has 2+ entries and another frame follows, producing a fatal `Missing control sequence inserted / \inaccessible` error attributed to the wrong frame's `\end{frame}` (off-by-one). Fix by replacing every `$math$` inside `\addlegendentry` with `\ensuremath{math}`.
+
+6. **`\highlight{}` inside itemize/enumerate.** Grep `slides.tex` for `\highlight` and verify each match is inside a TikZ diagram, not inside a `\begin{itemize}` or `\begin{enumerate}` block. Every match inside a list is a defect per `audit-checklist.md` Style Guide Compliance #7.
+
+7. **Manual list typography inside TikZ nodes.** Grep `slides.tex` for TikZ node body content containing three or more segments separated by `\\` (with or without `[Npt]` spacing). Three patterns count: manual bullet glyphs (`$\bullet$~Item one\\$\bullet$~Item two\\$\bullet$~Item three`), manual line breaks alone (`Item one\\Item two\\Item three`), and comma-separated grouped lines. Every match is a defect per `audit-checklist.md` Box Text Anchoring #4. Fix by replacing the manual layout with `\node{\begin{minipage}{Wcm}\setlength{\leftmargini}{1em}\begin{itemize}\setlength{\itemsep}{2pt}\item Item one \item Item two \item Item three\end{itemize}\end{minipage}};` where `Wcm` matches the node's text width. Two-or-fewer items may remain as inline prose.
+
+Report each grep finding before applying the rest of the checklist. The greps are cheap and catch the highest-frequency defect classes.
 
 The agent checks every slide against every item in the audit checklist, covering all three former audit domains in a single pass:
 
@@ -466,7 +529,11 @@ The agent checks every slide against every item in the audit checklist, covering
 - Bezier curve clearance (bend-angle math and safe zone)
 - Code block audit (language specifier, length, font, palette, runnable script)
 - TikZ list typography (three or more parallel items inside a node must use a real bulleted list, not comma-separated grouped lines or manual line breaks)
+- Prose-vs-bullet match for parallel claims in non-TikZ columns (Content Quality #11)
+- Bullet rendering visibility in the compiled PDF (Content Quality #12)
 - Deck-level Limitations format (each card or item follows the three-part structure: what a skeptic would say, why the concern is reasonable, how it is addressed)
+- Deck-level facilitator-prompt placement (only on teaching/lecture decks; Deck-Level Checks #4)
+- Deck-level Compress decision audit (each Compress is content-tested, not count-tested; Deck-Level Checks #5)
 
 The agent returns a structured report.
 

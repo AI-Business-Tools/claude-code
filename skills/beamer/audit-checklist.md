@@ -73,8 +73,10 @@ Perform coordinate arithmetic on the `.tex` source. For each pair of adjacent el
 
 ## Graphics: Axis Baseline Validation
 
-1. For charts showing proportions, fractions, percentages, or cumulative values: verify `ymin=0`. A non-zero baseline exaggerates differences.
-2. For charts showing growth rates, changes, or residuals: verify the baseline is appropriate for the data range.
+1. **Zero-baseline default (all-positive y-axis data, all chart types):** verify `ymin=0` on every chart with all-positive y-axis values, regardless of chart type (bar, line, scatter, area). A non-zero baseline makes trends look larger than they are and is a recurring defect. Non-zero baseline is permitted only when (a) the data genuinely fills a tight band such that zero-basing produces 80%+ whitespace, AND (b) the slide carries a visible "scale starts at N" note near the axis or in a caption. Verify the note is rendered at `\scriptsize` in `CharText`, placed in the caption or near the axis origin, not inside the plot area. Flag any non-zero baseline that lacks the scale note or renders it at a smaller size or inside the plot area.
+2. **No exception for proportions, fractions, or percentages:** these axes use `ymin=0` (and typically `ymax=100` or `ymax=1`) with no exceptions, no non-zero baseline even with a scale note.
+3. For charts showing growth rates, changes, or residuals: verify the baseline is appropriate for the data range.
+4. The zero-baseline rule applies to y-axes only (this is a vertical-scale convention). X-axis baselines on horizontal bar charts are not bound by this rule.
 
 ## Graphics: Annotation-Data Alignment
 
@@ -102,6 +104,12 @@ Perform coordinate arithmetic on the `.tex` source. For each pair of adjacent el
 1. All multi-line TikZ content boxes must use `anchor=north` with `align=left` and `inner sep` of at least 6pt.
 2. The only exception is single-line label nodes where centering is appropriate.
 3. **`minimum height` trap:** when `minimum height` exceeds natural text height, TikZ vertically centers the text regardless of `anchor=north`. Fix: draw the box as an empty node, then place text with a separate `\node[anchor=north west]` shifted inside.
+4. **No manual list typography inside TikZ nodes.** Any list of three or more parallel items inside a TikZ node must use a real `itemize` or `enumerate` environment wrapped in a `minipage` matching the node's text width. This rule applies regardless of how the items are separated in the source:
+   - Manual bullet glyphs: `$\bullet$~Item one\\$\bullet$~Item two\\$\bullet$~Item three`
+   - Manual line breaks alone: `Item one\\Item two\\Item three`
+   - Comma-separated grouped lines: `Vendor A, Vendor B, Vendor C\\Vendor D, Vendor E, Vendor F`
+
+   All three patterns produce no hanging indent on wrapped lines, no consistent inter-item spacing, and no visual list affordance. Fix: replace the manual layout with `\node{\begin{minipage}{Wcm}\begin{itemize}[leftmargin=*]\item Item one \item Item two \item Item three\end{itemize}\end{minipage}};`. The minipage gives `itemize` a real list context and `leftmargin=*` produces the hanging indent. Two-or-fewer items in a TikZ node may remain as inline prose without `itemize`.
 
 ## TikZ: Font Consistency
 
@@ -122,9 +130,9 @@ Perform coordinate arithmetic on the `.tex` source. For each pair of adjacent el
 
 ## Hyphenation
 
-1. **Frametitles:** verify no word in any `\frametitle{}` is hyphenated across lines. If the title wraps, reword it to break at a natural point. LaTeX's auto-hyphenation produces ugly breaks in headings.
+1. **Frametitles:** verify no word in any `\frametitle{}` is hyphenated across lines. If the title wraps, reword it to break at a natural point. LaTeX's auto-hyphenation produces ugly breaks in headings (for example, "Writ-ten", "Assess-ments").
 2. **Table columns:** in narrow `p{...}` columns (under 3cm), verify no words are inappropriately hyphenated. Fix by using `\raggedright` in the column specifier (`>{\raggedright\arraybackslash}p{2.2cm}`) or by rewording cell content.
-3. **TikZ text nodes:** verify text inside narrow TikZ nodes (`text width` under 3cm) does not hyphenate. Fix by abbreviating text or widening the node.
+3. **TikZ text nodes:** verify no word in any TikZ node containing body content is hyphenated across lines, regardless of node width. Fix by rephrasing, abbreviating, widening the node, or adding `\hyphenpenalty=10000\exhyphenpenalty=10000` inside the node. Mid-word hyphenation in a 12cm centered box is just as ugly as in a 2cm box; the visual defect does not depend on width.
 
 ## TikZ: Diagram Centering and Spacing
 
@@ -152,6 +160,7 @@ Perform coordinate arithmetic on the `.tex` source. For each pair of adjacent el
 
 1. **Citation strategy:** if >80% of content slides cite the same source, replace per-slide `\sourcecite{}` with a single "Based on [Author. Year. Title.]" line on the title slide. Do not retain per-slide citations with rationale about "academic deck" or "classroom use"; repeated identical citations add visual noise without informational value. Slides citing a different source retain their own `\sourcecite{}`.
 2. **Cross-deck terminology:** if multiple related decks are built from the same source, verify shared labels and terminology match across decks.
+3. **Limitations slide format:** if a Limitations slide exists, verify each card or item follows the three-part structure specified in `SKILL.md` Content Requirements: **what a skeptic would say / why the concern is reasonable / how it is addressed or acknowledged.** Short prose paragraphs without that structure are a defect. The three-part format reads as a Devil's Advocate exchange, which is the pedagogical pattern this slide is designed for; loose prose loses that affordance. Fix by rewriting each card with three labeled lines (for example, bolded "Concern:" / "Why reasonable:" / "Response:" or equivalent).
 
 ## Narrative Arc
 
@@ -200,7 +209,7 @@ Cross-reference against `../../style-guides/beamer/style-guide.md`:
 5. pgfplots axes must include `1000 sep={}` on any axis displaying years.
 6. `[shrink=N]` must not be used on any frame (displaces TikZ overlay nodes including `\sourcecite`).
 7. No `\emphbox` or callout boxes; no `\highlight{}` inside `itemize`, `enumerate`, or running text (reserved for standalone TikZ diagram labels; use `\textbf{\color{DeepTeal}...}` for inline emphasis).
-8. Source citations must use `\sourcecite{}` with Chicago Author-Date (Author, Year, Title in `\textit{}`, Publication). No ad-hoc "Source: X" text, no custom footer macros, no manual `\vfill` constructions.
+8. Source citations must use `\sourcecite{}` with Chicago Author-Date (Author, Year, Title, Publication; all set upright, no `\textit{}` on titles). No ad-hoc "Source: X" text, no custom footer macros, no manual `\vfill` constructions.
 9. `\sourcecite{}` must use `[remember picture,overlay]` with `yshift=10mm`, `anchor=south east`, `align=right`, `text width=\dimexpr\paperwidth-36pt\relax`. Do NOT use `\RaggedLeft` or `\raggedleft` inside TikZ nodes.
 10. No visible insertion notes or `\insertnote` on slides; notes use `\note{}` only.
 11. The preamble must match `../../style-guides/beamer/style-guide.md` Quick Reference exactly (colors, theme, fonts, templates, macros, `\setbeamersize`, footer `\vskip8mm`).

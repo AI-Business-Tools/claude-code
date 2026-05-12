@@ -1,6 +1,6 @@
 ---
 name: beamer
-description: Beamer slide generation with code-first figures, outline checkpoint, audience-aware rhetoric, Devil's Advocate slides, code blocks, and transition slides. Adapted from Scott Cunningham's beautiful_deck approach.
+description: Beamer slide generation with citation strategy decision, code-first matplotlib figures, outline checkpoint with content inventory, audience-aware rhetoric, Devil's Advocate slides, code blocks, and transition slides. Quality audit runs as a single agent at the sonnet tier. Adapted from Scott Cunningham's beautiful_deck approach.
 triggers: beamer, beamer slides, deck
 allowed-tools: Bash(pdflatex*), Bash(xelatex*), Bash(lualatex*), Bash(latexmk*), Bash(bibtex*), Bash(biber*), Bash(python*), Bash(pip*), Bash(pdftoppm*), Bash(cd*), Bash(mkdir*), Bash(ls*), Bash(cp*), Bash(mv*), Bash(rm*), Bash(which*), Bash(type*), Bash(kpsewhich*), Bash(tlmgr*), Bash(texhash*), Bash(mactex*), Bash(mktexlsr*), Bash(fmtutil*), Bash(updmap*), Bash(brew*), Bash(find*), Bash(system_profiler*), Bash(fc-list*), Bash(eval*), Bash(export*), Bash(cat*), Bash(grep*), Bash(head*), Bash(tail*), Bash(wc*), Read, Write, Edit, Glob, Grep, Agent
 argument-hint: [content-notes-or-summary] [audience=teaching|faculty|professional|consulting|working]
@@ -114,6 +114,21 @@ Apply the audience-specific guidelines from the matched pattern throughout all s
 
 ---
 
+## Step 0.6: Citation Strategy Decision
+
+Before reading the style guide or writing any content, determine and state the deck's citation pattern:
+
+- **Single-source** (one paper, report, or dataset drives 80 percent or more of content slides): the title slide carries a "Based on [Author. Year. Title. Publication.]" line. Content slides carry `\sourcecite{}` only when they draw on a different source. Repeated identical citations on every slide add visual noise; this is enforced by the audit checklist's Deck-Level Checks.
+- **Multi-source** (slides draw on different sources): every content slide carries its own `\sourcecite{}`.
+
+Refer to the Citation Strategy section in `../../style-guides/beamer/style-guide.md` for both rendering patterns.
+
+State the decision explicitly to the user before proceeding, for example: "Citation strategy: single-source. Title-slide attribution: Smith. 2024. Paper Title. Publication. Slides with different sources: none." or "Citation strategy: multi-source. Per-slide `\sourcecite{}` on every content slide."
+
+This is a generation-time decision, not a post-hoc audit catch. Get it right before writing any `.tex` content. Do not produce per-slide citations on a single-source deck without explicit override slides identified at this step.
+
+---
+
 ## Design Requirements
 
 **First action: use the Read tool to read these four files now, in order:**
@@ -143,6 +158,13 @@ Apply the audience-specific guidelines from the matched domain pattern throughou
 
    Reference the decision matrix in `figure_generation.md` to determine which path each figure takes. Default to pgfplots; use matplotlib only when the figure exceeds pgfplots' comfortable range per the matrix.
 4. **Devil's Advocate slide:** Whether included or omitted, and why (per the active domain pattern's rules).
+5. **Source content inventory:** Enumerate every major table and figure cataloged in `notes.md` (or the source's text extract). For each item, decide one of three handlings and record a one-line reason:
+   - **Render** — produce a slide that includes the magnitudes (numeric values, percentage points, coefficients). The reader sees the source's quantitative content.
+   - **Compress** — fold into a parent slide as a categorical or summarized treatment, deliberately dropping some magnitudes. Reason must be specific (for example, "the magnitude pattern is shown in Figure X already" or "audience does not need per-site detail").
+   - **Drop** — omit entirely. Reason must be specific (for example, "robustness check that does not change the main finding" or "appendix-level methodological detail").
+
+   Report a single inventory line such as: "Source content inventory: N tables/figures cataloged. M rendered, K compressed, L dropped." Then list each Compress and Drop decision with its one-line reason. Render decisions do not need individual reasons. The most common information-loss pattern in this skill is silently collapsing two information-dense tables (for example, a "rises" table and a "falls" table, each with per-row magnitudes) into one categorical slide that strips the magnitudes. Make these decisions explicit at outline time, not implicitly during slide writing. If a Compress or Drop reason reads as "for brevity" or "to fit the slide count," reconsider whether the content should be preserved as its own slide.
+6. **Citation strategy recap:** Restate the decision from Step 0.6 (single-source or multi-source) and which slides, if any, carry overrides. This pins the strategy into the approved outline so it cannot drift during slide writing.
 
 Save the outline as `outline.md` in the build directory.
 
@@ -410,7 +432,9 @@ Recompile and verify all warnings are eliminated.
 
 After the deck compiles cleanly, perform a **comprehensive quality audit** of the final PDF and `.tex` source. This audit is not optional; it must happen every time. This single audit replaces the former three-agent pipeline (deck evaluation, graphics verification, quality audit) to avoid loading the full source into context three times.
 
-Launch **one audit agent** (using the Agent tool) that reads these files before examining any slides:
+Launch **one audit agent** (using the Agent tool) with `subagent_type: general-purpose` and `model: sonnet`. The audit is rule-application against the published checklist; sonnet is sufficient and substantially cheaper than the opus tier. Do not use opus unless a prior sonnet audit on the same deck produced obvious errors (for example, missed a clear style-guide violation or invented findings).
+
+The agent reads these files before examining any slides:
 1. The **Beamer Style Guide** at `../../style-guides/beamer/style-guide.md`
 2. The **audit checklist** at `audit-checklist.md` (in this skill's directory)
 3. The full compiled PDF (all pages)
@@ -438,15 +462,21 @@ The agent checks every slide against every item in the audit checklist, covering
 
 **Checklist audit** (all items in `audit-checklist.md`):
 - Sourcecite clearance, hyphenation, text overflow, citation strategy, style guide compliance, and all other checklist items
+- Narrative arc (pedagogical ordering, opening hook, closing takeaway)
+- Bezier curve clearance (bend-angle math and safe zone)
+- Code block audit (language specifier, length, font, palette, runnable script)
+- TikZ list typography (three or more parallel items inside a node must use a real bulleted list, not comma-separated grouped lines or manual line breaks)
+- Deck-level Limitations format (each card or item follows the three-part structure: what a skeptic would say, why the concern is reasonable, how it is addressed)
 
 The agent returns a structured report.
 
 #### Report Format
 
-Present the audit results to the user as a slide-by-slide list. Only list slides with issues; skip clean slides:
+Present the audit results to the user as a single numbered findings list. Deck-level findings (citation strategy, cross-deck terminology, Limitations format) belong in this same list with the same fix-it-now status as slide-level findings; do not segregate them into a separate "note," "advisory," or "deck-level observation" section. The audit checklist's Deck-Level Checks section contains gating rules, not optional suggestions. Only list slides with issues; skip clean slides:
 
-> **Quality Audit: [N] issues found across [M] slides:**
+> **Quality Audit: [N] issues found:**
 >
+> - **Deck-level:** 14 of 15 content slides cite the same primary source. Per audit checklist Deck-Level Checks, consolidate to a single title-slide "Based on [Author. Year. Title.]" line and remove per-slide `\sourcecite{}` from those 14 slides. Slides citing a different source retain their `\sourcecite{}`.
 > - **Slide 3** "Title of Slide": bar chart x-axis labels extend beyond right edge of frame; "methodology" hyphenated awkwardly in subtitle
 > - **Slide 7** "Title of Slide": TikZ flow diagram arrow from node 3 to node 4 is clipped; left column text overlaps the column divider
 > - **Slide 12** "Title of Slide": table values show 2,024 instead of 2024; title is generic ("Data Overview"), should state the finding

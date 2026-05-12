@@ -1,9 +1,9 @@
 ---
 name: slides-content
-description: Multi-step workflow to create presentation slides from content (academic papers, articles, notes). Reads the source (splitting PDFs, extracting text from Word/RTF, or reading markdown/text/LaTeX directly), summarizes the content, generates Beamer slides with figures and tables, then converts to PPTX using the style guide.
+description: Multi-step workflow to create presentation slides from content (academic papers, articles, notes). Reads the source (splitting PDFs, extracting text from Word/RTF, or reading markdown/text/LaTeX directly), summarizes the content, generates Beamer slides with figures and tables, then converts to PPTX using the style guide. Reuses any pre-existing text extract or summary in the output directory to avoid redundant work. Optional `audience=` parameter forwards to the beamer skill to select an audience-specific structural template.
 triggers: slide this, slides from this, create slides from this, make a deck from this, turn this into slides, slides from this paper, presentation from this article, build a deck
 allowed-tools: Bash(python*), Bash(pip*), Bash(curl*), Bash(wget*), Bash(mkdir*), Bash(ls*), Bash(pdflatex*), Bash(xelatex*), Bash(lualatex*), Bash(latexmk*), Bash(bibtex*), Bash(biber*), Bash(cd*), Bash(cp*), Bash(mv*), Bash(rm*), Bash(which*), Bash(type*), Bash(kpsewhich*), Bash(tlmgr*), Bash(texhash*), Bash(mactex*), Bash(mktexlsr*), Bash(fmtutil*), Bash(updmap*), Bash(brew*), Bash(find*), Bash(system_profiler*), Bash(fc-list*), Bash(sudo*), Bash(eval*), Bash(export*), Bash(cat*), Bash(grep*), Bash(head*), Bash(tail*), Bash(wc*), Bash(textutil*), Read, Write, Edit, WebSearch, WebFetch, Glob, Grep, Task
-argument-hint: [optional: file-path, url, or leave blank to pick from menu]
+argument-hint: [optional: file-path, url, or leave blank to pick from menu] [audience=teaching|faculty|professional|consulting|working]
 ---
 
 # Slides from Content: Four-Step Workflow
@@ -120,6 +120,20 @@ The output directory is a **per-document subfolder** named `<content_name>/` ins
 
 ### If the input is a PDF
 
+**Pre-flight: reuse existing text extract if one is already present.**
+
+Before splitting, check whether `<content_name>_text.md` exists in the output directory. If it does, the deep-read has already been done (typically by a prior knowledge-base pipeline run, or by an earlier slide build). Skip splitting and the deep-read agent entirely:
+
+1. Create the build directory (`<content_name>_build/`) if it does not already exist.
+2. Copy `<output_dir>/<content_name>_text.md` to `<content_name>_build/notes.md`. The beamer skill reads `notes.md` from the build directory; the copy makes the existing extract available under the expected name.
+3. Report:
+   > Reusing existing text extract at `<output_dir>/<content_name>_text.md` (last modified: YYYY-MM-DD). Skipping PDF splitting and deep-read. Delete the file and re-run if you want a fresh extraction.
+4. Proceed immediately to Step 2.
+
+This is the default behavior; do not ask whether to reuse. The deep-read agent is the single most expensive step in this skill (large agent token cost); skipping it when the extract already exists is a substantial saving. The Step 2 reuse-summary pre-flight follows the same pattern.
+
+If `<content_name>_text.md` does not exist, continue with the splitting logic below.
+
 First check for existing splits before splitting. Look for `<content_name>_build/split_<content_name>/` in the output directory. If it exists and contains `.pdf` files, ask:
 > "Splits already exist for `<content_name>` (N chunks). Reuse existing splits, or re-split from scratch?"
 - **Reuse**: skip splitting, use the existing files, and proceed to deep-read below
@@ -143,7 +157,7 @@ After the agent completes, read `notes.md` (plain text) in the parent conversati
 
 Skip splitting. Create the build directory (`<content_name>_build/`) if it does not already exist, then read the file directly:
 - For `.md`, `.txt`, and `.tex`: read the file contents using the Read tool
-- For `.docx`, `.doc`, `.rtf`: extract text using macOS built-in `textutil -convert txt "<file_path>" -output "<build_dir>/extracted.txt"`, then read the extracted text file
+- For `.docx`, `.doc`, `.rtf`: extract text using macOS built-in `textutil -convert txt "<file_path>" -output "<build_dir>/extracted.txt"`, then read the extracted text file. Note that `textutil` extracts text only; embedded charts, images, and shapes in the Word or RTF source are not captured and will not appear in the generated deck. If the source has substantive visual content that matters for the deck, supply a PDF version of the document instead.
 
 Save extracted content to `notes.md` in the build subdirectory, using the same structured format as the PDF deep-read (research question, audience, method, findings, etc., where applicable).
 
@@ -154,6 +168,16 @@ When notes are complete, proceed immediately to Step 2.
 ---
 
 ## Step 2: Summarize the Content
+
+**Pre-flight: reuse existing summary if one is already present.**
+
+Before running the summary step, check whether `<content_name>_summary.md` already exists in the output directory. If it does, reuse it without regeneration and report:
+
+> Reusing existing summary at `<output_dir>/<content_name>_summary.md` (last modified: YYYY-MM-DD). Skipping summary regeneration. Delete the file and re-run if you want a fresh summary.
+
+Then skip the rest of Step 2 and proceed to Step 3. This is the default behavior; do not ask whether to reuse. This matters when the user has already processed the source through a knowledge-base or summarization pipeline that produced a `_summary.md` equivalent to what this step would generate.
+
+If `<content_name>_summary.md` does not exist, continue with the MANDATORY FIRST ACTIONS below.
 
 **MANDATORY FIRST ACTIONS (before writing any summary content):**
 1. Auto-detect content type based on the source material or `notes.md`:
@@ -195,6 +219,8 @@ Proceed immediately to Step 3. This skill's purpose is to generate slides; no co
 Do not proceed without completing both reads. The style guide contains the exact LaTeX preamble to copy verbatim; generating slides without reading it produces output that violates the design spec.
 
 Apply the **beamer skill** (`../beamer/SKILL.md`) using the deep-reading notes (`notes.md` from the build subdirectory) and the summary (`<content_name>_summary.md` from the output subdirectory) as input. All compilation work happens in the build subdirectory.
+
+**Audience parameter forwarding:** if this skill was invoked with an `audience=` parameter (for example, `audience=faculty`), pass that parameter through to the beamer skill so its Step 0.5 Audience Triage matches the specified pattern. If no audience parameter was passed, the beamer skill applies its default (teaching lecture).
 
 The beamer skill handles the full Beamer generation cycle:
 - Original aesthetic design targeted at a professional or graduate student audience

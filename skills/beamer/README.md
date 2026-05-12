@@ -1,6 +1,6 @@
 # Beamer Slide Generator
 
-Generate production-quality LaTeX Beamer presentations from source content. The skill handles the complete workflow: audience triage, outline checkpoint, code-first figure generation, `.tex` authoring, compilation, and multi-agent quality audit.
+Generate production-quality LaTeX Beamer presentations from source content. The skill handles the complete workflow: audience triage, citation strategy decision, outline checkpoint with content inventory, code-first figure generation, `.tex` authoring, compilation, and a merged quality audit agent.
 
 ---
 
@@ -17,13 +17,14 @@ A second problem is mechanism selection. When everything is a TikZ diagram, the 
 The skill follows a staged pipeline that separates planning from execution:
 
 1. **Audience triage:** match the request to a domain pattern (teaching, faculty, professional, consulting, or working) that defines rhetoric balance, slide count range, density level, and which optional elements (Devil's Advocate slides, transition slides, code blocks) to include.
-2. **Outline checkpoint:** produce a complete slide sequence with assertion titles and a figure plan before writing any `.tex` content. Wait for approval.
-3. **Code-first figure generation:** for any figures identified as needing matplotlib (per the decision matrix in `figure_generation.md`), write and run standalone Python scripts before authoring the `.tex` file. pgfplots figures are authored inline.
-4. **Figure extraction:** for figures that must be pulled from source PDFs, render, verify, and crop before writing any `.tex` content.
-5. **`.tex` authoring:** copy the preamble verbatim from the style guide's Quick Reference section. Apply the visual mechanism decision table. Compute TikZ box heights from source before writing overlay text (do not rely on post-compilation visual inspection).
-6. **Compilation cycle:** run `pdflatex` at least twice (required for `\sourcecite` overlay positioning). Fix all hbox/vbox warnings before proceeding.
-7. **Quality audit:** launch one audit agent that reads the style guide, the audit checklist, the compiled PDF, and the `.tex` source, then checks every slide against every checklist item. Fix all findings and recompile.
-8. **Deliverable placement:** copy `slides.pdf` to the parent folder as `<base_name>_slides.pdf`.
+2. **Citation strategy decision:** state up front whether the deck is single-source (one paper or report drives 80 percent or more of slides; title-slide attribution, no per-slide citations) or multi-source (per-slide `\sourcecite{}` everywhere). Locks the strategy before slide writing so per-slide citations do not drift onto a single-source deck.
+3. **Outline checkpoint:** produce a complete slide sequence with assertion titles, a figure plan, a source content inventory (Render / Compress / Drop per major table or figure with a reason for each Compress and Drop), and a citation strategy recap before writing any `.tex` content. Wait for approval.
+4. **Code-first figure generation:** for any figures identified as needing matplotlib (per the decision matrix in `figure_generation.md`), write and run standalone Python scripts before authoring the `.tex` file. pgfplots figures are authored inline.
+5. **Figure extraction:** for figures that must be pulled from source PDFs, render, verify, and crop before writing any `.tex` content.
+6. **`.tex` authoring:** copy the preamble verbatim from the style guide's Quick Reference section. Apply the visual mechanism decision table. Compute TikZ box heights from source before writing overlay text (do not rely on post-compilation visual inspection).
+7. **Compilation cycle:** run `pdflatex` at least twice (required for `\sourcecite` overlay positioning). Fix all hbox/vbox warnings before proceeding.
+8. **Quality audit:** launch one audit agent (general-purpose, sonnet tier) that reads the style guide, the audit checklist, the compiled PDF, and the `.tex` source, then checks every slide against every checklist item including deck-level checks (citation strategy consolidation, Limitations format). Fix all findings and recompile.
+9. **Deliverable placement:** copy `slides.pdf` to the parent folder as `<base_name>_slides.pdf`.
 
 ---
 
@@ -44,6 +45,12 @@ The skill follows a staged pipeline that separates planning from execution:
 **Why the circuit breaker:** After three failed fix attempts on the same defect, the state of the `.tex` file degrades. Each attempt introduces side effects that obscure the original error. Stopping at three and reporting produces a recoverable state; continuing typically does not.
 
 **Why one merged audit agent:** The former pipeline ran three separate agents (deck evaluation, graphics verification, quality checklist). Each agent had to load the full PDF and `.tex` source into context independently. A single agent reads the same files once and applies all three audit domains in one pass, producing equivalent findings at lower token cost.
+
+**Why the audit runs on sonnet rather than opus:** The audit is rule application against a published checklist, not open-ended reasoning. Sonnet handles this reliably at a fraction of the cost. The escape hatch is to upgrade to opus only if a prior sonnet audit on the same deck produced obvious errors (a missed clear violation or an invented finding); in practice this is rare.
+
+**Why the outline checkpoint requires a source content inventory:** The most common information-loss pattern in this skill is silently collapsing two information-dense tables (for example, a "rises" table and a "falls" table, each with per-row magnitudes) into one categorical slide that strips the magnitudes. Requiring an explicit Render / Compress / Drop decision per major table or figure at outline time, with a one-line reason for each Compress and Drop, makes that decision visible and reviewable before any `.tex` is written.
+
+**Why the citation strategy decision is its own step:** Single-source decks with `\sourcecite{}` repeated on every slide carry the same citation 15 times. The visual noise is significant. The audit can catch the pattern after the fact, but consolidating 14 of 15 slides post-audit forces a re-audit cycle. Deciding up front and pinning the choice into the approved outline prevents the drift.
 
 ---
 

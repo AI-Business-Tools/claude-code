@@ -241,24 +241,49 @@ The TikZ overlay positions the citation 18pt from the right edge and 10mm above 
 
 ### Citation Format
 
-Source citations follow Chicago Author-Date. Every citation must have all four components: **Author. Year. Title. Publication.**
+Source citations follow Chicago Author-Date. Every citation must have all four components: **Author. Year. Title. Publication.** All four components are set in upright type; do not wrap titles in `\textit{}`.
 
-- **Single author:** `Last, First. Year. \textit{Title.} Publication.`
-- **Two authors:** `Last, First, and First Last. Year. \textit{Title.} Publication.`
-- **Three or more:** `Last, First, et al. Year. \textit{Title.} Publication.`
-- **Corporate author:** `Organization Name. Year. \textit{Title.} Publication Type.`
+- **Single author:** `Last, First. Year. Title. Publication.`
+- **Two authors:** `Last, First, and First Last. Year. Title. Publication.`
+- **Three or more:** `Last, First, et al. Year. Title. Publication.`
+- **Corporate author:** `Organization Name. Year. Title. Publication Type.`
 
 **Required fields:** Every `\sourcecite{}` must contain all of:
 1. **Author** (personal name as Last, First; or organization name)
 2. **Year**
-3. **Title** wrapped in `\textit{}`
+3. **Title** (upright, not italicized; do not use `\textit{}`)
 4. **Publication** (journal, publisher, report type, or program name)
 
-If any field is missing, the citation is incomplete. "BCG. 2025." alone is wrong because it has no title and no publication. The correct form is "BCG. 2025. \textit{AI Maturity Report.} Boston Consulting Group."
+If any field is missing, the citation is incomplete. "BCG. 2025." alone is wrong because it has no title and no publication. The correct form is "BCG. 2025. AI Maturity Report. Boston Consulting Group."
 
-**Multi-source citations:** When a slide cites multiple sources, separate them with a semicolon and space. Each source must be a complete citation: `Last, First. Year. \textit{Title.} Publication; Last, First. Year. \textit{Title.} Publication.`
+**Multi-source citations:** When a slide cites multiple sources, separate them with a semicolon and space. Each source must be a complete citation: `Last, First. Year. Title. Publication; Last, First. Year. Title. Publication.`
 
-**Usage example:**
+### Citation Strategy: Single-Source vs. Multi-Source Decks
+
+Decide once per deck whether the source pattern is single-source or multi-source. The rendering differs:
+
+- **Single-source deck** (one paper, report, or dataset drives 80 percent or more of content slides): cite once as a "Based on [Author. Year. Title. Publication.]" line on the title slide. Do not place `\sourcecite{}` on content slides that draw from this single source. Use `\sourcecite{}` only on the subset of slides that draw on a different source. Repeated identical citations on every slide add visual noise without informational value. This is enforced by the audit checklist's Deck-Level Checks.
+- **Multi-source deck** (slides draw on different sources): place a `\sourcecite{}` on every content slide. Identical citations on two adjacent slides are fine in this pattern because the next slide may differ.
+
+**Single-source deck example (title slide carries the attribution):**
+
+```latex
+{
+\setbeamercolor{background canvas}{bg=SlateNavy}
+\begin{frame}[plain]
+\vfill
+\begin{center}
+  {\color{white}\Large\bfseries The Household Impact of Generative AI}\\[14pt]
+  {\color{DeepTeal!60!white}\normalsize Based on Blank, Schubert, and Zhang. 2026. SIEPR Working Paper 26-05.}
+\end{center}
+\vfill
+\end{frame}
+}
+```
+
+Content slides in a single-source deck carry no `\sourcecite{}` unless they introduce a different source.
+
+**Multi-source deck example (one content slide):**
 
 ```latex
 \begin{frame}{AI Adoption Outpaces Prior Technologies}
@@ -273,14 +298,16 @@ If any field is missing, the citation is incomplete. "BCG. 2025." alone is wrong
   % TikZ chart here
 \end{column}
 \end{columns}
-\sourcecite{Brynjolfsson, Erik, et al. 2024. \textit{Generative AI at Work.} NBER Working Paper.}
+\sourcecite{Brynjolfsson, Erik, et al. 2024. Generative AI at Work. NBER Working Paper.}
 \end{frame}
 ```
+
+A deck that begins as multi-source but ends up with 80 percent or more of slides citing the same source has crossed the threshold and should be converted to the single-source pattern.
 
 ### Rules for Citations and Notes
 
 - Source citations use `\sourcecite{}` only. No custom footer macros, no raw "Source: X (year)" text, no manual `\vfill` constructions outside of `\sourcecite{}`.
-- The `\sourcecite{}` macro renders text in upright `\scriptsize`. Titles must use `\textit{}` so they appear visually italicized within the otherwise upright citation text.
+- The `\sourcecite{}` macro renders text in upright `\scriptsize`. Citation text contains no italic: author, year, title, and publication are all set upright. Do not wrap titles in `\textit{}`.
 - Speaker notes use `\note{}` (invisible on slides). Never use visible `\insertnote` macros.
 - Insertion or placement comments use LaTeX `%` comments during drafting, never visible text.
 - No visible footer content (the footline template reserves space only).
@@ -291,7 +318,7 @@ Three tiers of bottom-of-slide text, each with distinct formatting. Never mix th
 
 | Text type | Formatting | Examples |
 |---|---|---|
-| **Source citation** | `\sourcecite{...}` (renders as `\scriptsize`, MedGray, right-aligned overlay) | Author. Year. *Title.* Publication. |
+| **Source citation** | `\sourcecite{...}` (renders as `\scriptsize`, MedGray, right-aligned overlay; all upright, no italic on titles) | Author. Year. Title. Publication. |
 | **Facilitator note / content framing** | `\footnotesize\color{CharText}` | "Commit before looking around", "The case does not resolve this tension" |
 | **Table/data footnote** | `\scriptsize\color{CharText}` | "*FY 2024 net income includes a one-time tax benefit" |
 
@@ -886,6 +913,73 @@ When content overflows a frame, reduce the content rather than scaling the frame
 
 ---
 
+## Code Blocks (listings)
+
+For slides that include code (skill structure, AI tool workflows, data visualization scripts), use the `listings` package with palette-matched styling.
+
+### Package Setup
+
+Add to the preamble (after other `\usepackage` declarations):
+
+```latex
+\usepackage{listings}
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{DeepTeal}\bfseries,
+    commentstyle=\color{MedGray}\itshape,
+    stringstyle=\color{CyanBlue},
+    backgroundcolor=\color{LightGray},
+    frame=single,
+    framesep=4pt,
+    rulecolor=\color{MedGray!50},
+    xleftmargin=6pt,
+    xrightmargin=6pt,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=2,
+}
+```
+
+### Usage
+
+```latex
+\begin{lstlisting}[language=Python]
+from anthropic import Anthropic
+
+client = Anthropic()
+message = client.messages.create(
+    model="claude-sonnet-4-20250514",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": prompt}]
+)
+\end{lstlisting}
+```
+
+### Rules
+
+- Keep code blocks under 12 lines per slide. If longer, split across slides or show a skeleton on the slide and provide the full script in `scripts/`.
+- Use `\footnotesize` (the default in `\lstset` above) for code. Do not go smaller than `\scriptsize`.
+- Every code block shown in the deck should correspond to a real, runnable script file in the `scripts/` directory.
+- For Python, use `language=Python`. For shell commands, use `language=bash`. For R, use `language=R`.
+
+---
+
+## Matplotlib Figure Inclusion
+
+When including figures generated by external Python or matplotlib scripts (see `figure_generation.md` in the beamer skill directory), use these conventions:
+
+```latex
+\includegraphics[width=0.85\textwidth,height=0.68\textheight,keepaspectratio]{figures/fig1_descriptive_name}
+```
+
+- Omit the file extension; pdflatex finds the .pdf automatically.
+- Always include both `width` and `height` with `keepaspectratio` to prevent overflow.
+- The `height=0.68\textheight` constraint prevents tall figures from entering the `\sourcecite` zone.
+- For full-width figure slides (no text column), use `width=0.95\textwidth`.
+- For figures in a column (two-column layout), use `width=\columnwidth` and reduce height to `height=0.55\textheight`.
+
+---
+
 ## Quick Reference: Complete Preamble
 
 Copy this entire block to start a new presentation in this style:
@@ -903,6 +997,8 @@ Copy this entire block to start a new presentation in this style:
 \usepackage{colortbl}
 \usepackage{multirow}
 \usepackage{ragged2e}
+\usepackage{graphicx}  % For \includegraphics (matplotlib figures)
+\usepackage{listings}  % For code blocks
 
 \definecolor{SlateNavy}{HTML}{1B2A4A}
 \definecolor{DeepTeal}{HTML}{0D7377}
@@ -972,6 +1068,29 @@ Copy this entire block to start a new presentation in this style:
       at ([xshift=-18pt,yshift=10mm]current page.south east) {#1};
   \end{tikzpicture}%
 }
+
+% Code block styling (listings)
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{DeepTeal}\bfseries,
+    commentstyle=\color{MedGray}\itshape,
+    stringstyle=\color{CyanBlue},
+    backgroundcolor=\color{LightGray},
+    frame=single,
+    framesep=4pt,
+    rulecolor=\color{MedGray!50},
+    xleftmargin=6pt,
+    xrightmargin=6pt,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=2,
+}
+
+% Matplotlib figure inclusion conventions:
+%   \includegraphics[width=0.85\textwidth,height=0.68\textheight,keepaspectratio]{figures/fig_name}
+%   Omit file extension. Use height=0.68\textheight to clear \sourcecite zone.
+%   Full-width: width=0.95\textwidth. In columns: width=\columnwidth, height=0.55\textheight.
+
 \begin{document}
 % Slides go here
 \end{document}

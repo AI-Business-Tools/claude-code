@@ -10,11 +10,11 @@ Converting a research paper, article, or set of notes into a presentation requir
 
 The skill runs four sequential steps without pausing between them:
 
-1. **Read the source.** PDFs are split into 4-page chunks and read inside a subagent (the Agent Isolation Protocol from `../split-pdf/SKILL.md`). Non-PDF files are read directly using `textutil` for Word/RTF formats or the Read tool for markdown, text, and LaTeX. All extracted content is written to `notes.md` in the build subdirectory.
+1. **Read the source.** PDFs are split into 4-page chunks and read inside a subagent (the Agent Isolation Protocol from `../split-pdf/SKILL.md`). Non-PDF files are read directly using `textutil` for Word/RTF formats or the Read tool for markdown, text, and LaTeX. All extracted content is written to `notes.md` in the build subdirectory. **Reuse pre-flight:** if a `<content_name>_text.md` file already sits in the output directory (typically from a prior knowledge-base run or an earlier slide build), the skill copies it to `notes.md` and skips the expensive deep-read agent.
 
-2. **Summarize.** The skill auto-detects whether the source is academic (peer-reviewed paper, working paper, dissertation, technical report) or general (news, blog, report, interview). It applies the matching summary format and writes a structured summary to `<content_name>_summary.md` as a deliverable alongside the source file.
+2. **Summarize.** The skill auto-detects whether the source is academic (peer-reviewed paper, working paper, dissertation, technical report) or general (news, blog, report, interview). It applies the matching summary format and writes a structured summary to `<content_name>_summary.md` as a deliverable alongside the source file. **Reuse pre-flight:** if `<content_name>_summary.md` already exists in the output directory, the skill reuses it and skips regeneration.
 
-3. **Generate Beamer slides.** The skill reads `../beamer/SKILL.md` and the Beamer style guide in full before writing any LaTeX. It applies the full beamer compilation cycle: write, compile (two-pass pdflatex minimum), fix warnings, quality audit via a single merged agent, and recompile. Visual representations (TikZ diagrams, tables, charts) are preferred over bullet-heavy text slides.
+3. **Generate Beamer slides.** The skill reads `../beamer/SKILL.md` and the Beamer style guide in full before writing any LaTeX. It applies the full beamer compilation cycle: write, compile (two-pass pdflatex minimum), fix warnings, quality audit via a single merged agent on the sonnet tier, and recompile. Visual representations (TikZ diagrams, tables, charts) are preferred over bullet-heavy text slides. If the user passed an `audience=` parameter (`teaching`, `faculty`, `professional`, `consulting`, or `working`), it is forwarded to the beamer skill to select the matching domain pattern.
 
 4. **Convert to PPTX (optional).** After confirming with the user, the skill reads `../../style-guides/pptx/style-guide.md` in full, presents a per-slide conversion plan for approval, and generates native PowerPoint objects (shapes, charts, tables) using python-pptx. Image embedding is a last resort only.
 
@@ -82,6 +82,10 @@ Trigger the skill with any of these phrases:
 You can optionally provide a file path, URL, or pasted content as an argument. If you provide nothing, the skill presents a menu.
 
 Supported input types: `.pdf`, `.md`, `.txt`, `.docx`, `.doc`, `.rtf`, `.tex`, URLs (fetched via WebFetch), pasted text.
+
+**Note on Word and RTF sources:** `textutil` extracts text only. Embedded charts, images, and shapes in the source are not captured and will not appear in the generated deck. If the source has substantive visual content, supply a PDF version of the document instead.
+
+**Optional audience parameter:** Append `audience=teaching|faculty|professional|consulting|working` to the invocation to forward an audience pattern to the beamer skill. If omitted, the beamer skill defaults to teaching lecture.
 
 ### Dependencies
 

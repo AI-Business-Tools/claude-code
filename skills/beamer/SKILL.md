@@ -225,7 +225,50 @@ If the approved outline has **no matplotlib figures**, skip this step entirely. 
 
 The deck must cover the **key themes from all parts** of the source material. Do not skip or underweight any major section.
 
-If the source material has an **Issues section** with substantive limitations, include a **"Limitations and Critique"** slide near the end of the deck (in Act III, before the closing). Present 2-3 of the strongest objections using the format: what a skeptic would say, why the concern is reasonable, and how it is addressed or acknowledged. The active domain pattern determines whether this slide is required, optional, or omitted:
+### Methodology Slide Template
+
+When the deck includes a methodology slide (typically for empirical studies, research papers, or studies with a defined population and method), use this template. The slide is one frame, structured into seven ordered elements; drop any element that is not load-bearing for the source.
+
+**The seven elements (left column = study setup, right column = evaluation):**
+
+| Order | Element | Column | What it captures |
+|---|---|---|---|
+| 1 | Question | Left (setup) | What the research is trying to answer |
+| 2 | Method | Left (setup) | The approach (intervention, framework, algorithm, instrument) |
+| 3 | Data | Left (setup) | Source, size, time period |
+| 4 | Population | Left (setup) | Who or what was studied |
+| 5 | Outcomes | Right (evaluation) | Variables measured and how operationalized |
+| 6 | Comparison | Right (evaluation) | Baseline or counterfactual the method is judged against |
+| 7 | Analysis | Right (evaluation) | Statistical or computational lens applied |
+
+**Layout:** two equal columns. Left column holds the elements present from {Question, Method, Data, Population} (study setup). Right column holds the elements present from {Outcomes, Comparison, Analysis} (evaluation). Order moves question to measurement to analysis: left top to left bottom, then right top to right bottom.
+
+**Visual treatment:** each element is **one short phrase**, not a paragraph or bullet list. Label each phrase with the element name as a bold colored lead: `\textbf{\color{DeepTeal}Question:}` then the phrase. All seven labels use DeepTeal; do not vary color across labels. The bold-colored label is the visual anchor; the phrase carries the content.
+
+**Drop what is not load-bearing.** The template is a checklist of what could be on the slide, not what must be. Examples:
+
+- A behavioral RCT often drops Method (the design is the method) and emphasizes Population and Comparison.
+- A methods paper often drops Population and emphasizes Comparison and Analysis.
+- A descriptive empirical paper often drops Comparison (there is no counterfactual).
+- A non-empirical source (opinion piece, position paper, blog) drops the whole slide.
+
+**Column balance after drops.** If dropping elements leaves one column with fewer than 2 elements, rebalance: move Outcomes to the left column, or collapse to a single-column layout. Do not ship a methodology slide with one column at near-capacity and the other near-empty.
+
+**Sanity check.** A reader who finishes the slide should be able to predict the shape of the findings slides that follow. If they can't, an element is missing — restore one of the dropped elements, or rewrite an existing phrase to carry more weight.
+
+### Limitations Slide Template
+
+When the source material has an **Issues section** with substantive limitations, include a **"Limitations and Critique"** slide near the end of the deck (in Act III, before the closing). Present 2-3 of the strongest objections, each rendered in the three-part Devil's Advocate format below.
+
+**Three-part format for each item:**
+
+- **Concern:** what a skeptic would say (the objection in its strongest form).
+- **Why reasonable:** why the concern is legitimate (steel-man the skeptic; do not dismiss).
+- **Response:** how the source addresses the concern, or how the limitation is acknowledged when it cannot be fully resolved.
+
+Each item gets its own card or block. Visual treatment: 2-3 colored cards side-by-side or stacked, with bolded section labels (e.g., `\textbf{\color{DeepTeal}Concern:}`, `\textbf{\color{SlateNavy}Why reasonable:}`, `\textbf{\color{DeepTeal}Response:}`). Loose prose paragraphs without the three-part labels are a defect: the three-part format reads as a Devil's Advocate exchange, which is the pedagogical pattern this slide is designed for; loose prose loses that affordance.
+
+**Audience-pattern modifiers.** The active domain pattern determines whether this slide is required, optional, or omitted:
 
 - **Teaching Lecture:** Include when the source has an Issues section.
 - **Faculty Development:** Include (faculty audiences are skeptical by nature).
@@ -282,6 +325,26 @@ Tables and formatted lists are visual representations when properly styled:
 - **pgfplotstable:** If using `pgfplotstable`, set `columns/year/.style={int detect, 1000 sep={}}` or similar.
 
 This applies to all four-digit years anywhere in the deck: axis labels, table cells, slide text, figure annotations, and captions.
+
+---
+
+## Acronyms and Abbreviations
+
+**Define every non-exempt acronym on first use.** First appearance in the deck uses the form `Term (ACRONYM)`; every subsequent appearance uses the bare `ACRONYM`. "First use" means the first time the acronym appears anywhere in the deck, not the first time it appears on each slide. Frametitles follow the same rule: if a frametitle is where the acronym first appears, the title uses `Term (ACRONYM)`; later frametitles can use the bare acronym.
+
+This rule applies to all original deck content. Acronyms inside extracted figures from the source paper (`\includegraphics{...}` from the source) are not bound by this rule: the figure carries the source's own conventions.
+
+### Exemption list (no expansion needed)
+
+These acronyms are widely recognized and stay bare on every appearance:
+
+- **Geographic / political:** US, USA, UK, EU, UN, NATO, OECD, G7, G20, NYC, LA, SF, DC
+- **Business roles and education:** CEO, CFO, COO, CTO, CIO, CMO, VP, HR, PR, MBA, PhD, MD, JD, BA, BS, MS, MA, IRB
+- **Tech generic:** AI, ML, LLM, NLP, IT, API, URL, PDF, HTML, CSS, SQL, CSV, JSON, XML, HTTP, HTTPS, GUI, OS, USB, GPS, ATM, GPU, CPU, RAM, WiFi
+- **Business and finance:** ROI, KPI, OKR, B2B, B2C, SaaS, SEO, UX, UI, CRM, ERP, IPO, M&A, P&L, EBITDA, R&D, GDP, FAQ
+- **US agencies and regulation:** FBI, CIA, IRS, FDA, SEC, EPA, DOJ, NASA, GDPR, HIPAA
+
+Anything not on this list is expanded on first use. Paper-specific or domain-specialized acronyms (e.g., RCT, GMM, IV, DID, DPO, SFT, RLHF, RAG) are always expanded on first use, even when the source paper assumes the reader knows them. Adapt the exemption list to your audience: a deck for ML researchers might add ML-specific acronyms to the exempt list; a deck for medical professionals might add medical acronyms.
 
 ---
 

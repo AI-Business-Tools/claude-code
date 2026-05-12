@@ -42,6 +42,20 @@ These govern how findings are classified and reported:
 10. Verify no `grid=major` on bar charts (only the zero baseline `extra y tick` grid is permitted).
 11. **Visual verification:** all bars contained within plot area, only left and bottom axis lines visible, all bars uniform thickness, x-axis lines extend beyond outermost bars on both sides, `nodes near coords` labels on short bars do not collide with y-axis tick labels.
 
+## Graphics: `\addlegendentry` Math Tokens
+
+Pre-compile source check, cheap and catches a fatal pgfplots/beamer corruption that is mis-attributed to the wrong frame.
+
+1. **No raw math delimiters inside `\addlegendentry`:** grep the `.tex` source for `\addlegendentry{[^}]*\$`. Flag every match. Inside `\addlegendentry{...}`, math symbols must be wrapped with `\ensuremath{token}`, never with `$token$`. Math-mode dollars inside legend labels corrupt pgfplots state when the legend has 2+ entries and another frame follows, producing a fatal `Missing control sequence inserted / \inaccessible` error attributed to the wrong frame's `\end{frame}` (off-by-one). Fix by replacing every `$math$` inside `\addlegendentry` with `\ensuremath{math}`.
+
+## Graphics: Horizontal Bar Chart Axis Containment
+
+For every `xbar` (horizontal bar) chart, apply these checks in addition to the vertical-bar containment rules above where they apply (axis lines=left, no `clip=false`, no `symbolic x coords`).
+
+1. **Explicit `ymin`/`ymax` with padding (required):** verify the chart sets explicit `ymin` and `ymax` with at least 0.5 padding beyond the outermost bar y-positions. For N categories at y={0,…,N-1}, the minimum is `ymin=-0.5, ymax=N-0.5`. Or `enlarge y limits=0.18` or larger. Without padding, the top and bottom bars are clipped at the plot-area edges. This is the y-axis analog of the `xmin`/`xmax` padding rule for vertical bars.
+2. **Headroom for value labels via `nodes near coords`:** verify `xmax` provides at least 15-20% horizontal headroom beyond the longest bar so labels do not clip at the right edge.
+3. **Visual verification:** every bar's full thickness is visible with at least 3pt of clearance from the top and bottom plot-area boundaries; y-axis tick labels align vertically with their corresponding bars.
+
 ## Graphics: TikZ Element Clearance
 
 Perform coordinate arithmetic on the `.tex` source. For each pair of adjacent elements, compute the bounding box from `(x +/- minimum width/2, y +/- minimum height/2 +/- inner sep)` and verify no intersection.

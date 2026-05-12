@@ -239,7 +239,7 @@ For each Beamer slide, categorize every visual element into one of four types:
 | Type | When to use | PowerPoint implementation |
 |------|------------|--------------------------|
 | **Native chart** | Standard bar, line, scatter, pie charts where data is extractable from the .tex source | `add_chart()` + `fix_chart_fonts()` + palette colors |
-| **Native table** | Data tables | `add_table()` + `fix_table_fonts()` |
+| **Native table** | Data tables | `add_table()` + `fix_table_fonts()` + `fix_table_style()` |
 | **Native shapes/text** | Bullet points, text boxes, simple box layouts, colored boxes with text labels, box-and-arrow diagrams, flowcharts, stacked/layered layouts | `add_shape()` + `add_textbox()` with Calibri formatting |
 | **Hybrid (text + image)** | Two-column Beamer slides where one column is text/bullets and the other is a complex visual | Native text box(es) for the text column + `add_image_proportional()` for the visual column |
 | **Image embed** | LAST RESORT. The visual contains mathematical curve plots with axis annotations, or TikZ paths with Bezier curves/decorative elements that have no PowerPoint shape equivalent, AND it cannot be decomposed into rectangles, arrows, and text labels | Render at 300 DPI, crop, `add_image_proportional()` |
@@ -680,6 +680,40 @@ fix_table_fonts(table_shape, size_pt=18, align='ctr')
 
 Target: **18pt** for all table text. Use 14pt only when a table has dense content that genuinely cannot fit at 18pt.
 
+### Table style: mandatory XML fix
+
+python-pptx's `add_table()` produces a table whose `<a:tableStyleId>` is the **null GUID** `{00000000-0000-0000-0000-000000000000}`. This GUID **crashes LibreOffice 26 on PPTX import**. Setting a real built-in style GUID avoids the crash. The canonical safe choice is `{2D5ABB26-0587-4C30-8999-92F81FD0307C}` ("No Style, No Grid"), which provides no visual styling and does not override cell-level paragraph alignment.
+
+Two GUIDs are forbidden:
+- `{00000000-0000-0000-0000-000000000000}` (null) — crashes LibreOffice 26.
+- `{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}` ("Medium Style 2 - Accent 1") — silently overrides `para.alignment = PP_ALIGN.CENTER` and similar cell-level specs.
+
+```python
+def fix_table_style(table_shape):
+    """Set table style to the canonical safe built-in GUID.
+
+    {2D5ABB26-0587-4C30-8999-92F81FD0307C} = "No Style, No Grid":
+    minimal styling, no alignment override, LibreOffice 26 compatible.
+    """
+    SAFE_STYLE = '{2D5ABB26-0587-4C30-8999-92F81FD0307C}'
+    tbl_el = None
+    for el in table_shape._element.iter():
+        if el.tag.split('}')[-1] == 'tbl':
+            tbl_el = el; break
+    if tbl_el is None: return
+    tbl_pr = tbl_el.find(qn('a:tblPr'))
+    if tbl_pr is None:
+        tbl_pr = etree.SubElement(tbl_el, qn('a:tblPr'))
+        tbl_el.insert(0, tbl_pr)
+    sid = tbl_pr.find(qn('a:tableStyleId'))
+    if sid is None:
+        sid = etree.SubElement(tbl_pr, qn('a:tableStyleId'))
+    sid.text = SAFE_STYLE
+
+# Call after add_table() and fix_table_fonts():
+fix_table_style(table_shape)
+```
+
 ### Table positioning
 Tables must start at `CONTENT_LEFT = 1.10"` and span `CONTENT_W = 13.80"` (full content width) unless there is a side-by-side chart or other content. In that case, scale the table and chart proportionally to together fill the full content width. Never let a table float to the right or center at a narrower width than the surrounding shapes.
 
@@ -813,8 +847,13 @@ def run_quality_check(prs):
     FOOTER_TOP   = 7.70;  CONTENT_W   = 13.80
     MAX_RIGHT = CONTENT_LEFT + CONTENT_W   # 14.90
 
-    # Built-in table style that silently overrides cell-level paragraph alignment
-    BAD_STYLE = '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}'
+    # Null GUID — python-pptx's add_table() default. Crashes LibreOffice 26
+    # on PPTX import. Treat as a save blocker.
+    NULL_STYLE = '{00000000-0000-0000-0000-000000000000}'
+    # "Medium Style 2 - Accent 1" — silently overrides cell-level paragraph alignment.
+    OVERRIDE_STYLE = '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}'
+    # Canonical safe built-in: "No Style, No Grid" — minimal styling, no alignment override.
+    SAFE_STYLE = '{2D5ABB26-0587-4C30-8999-92F81FD0307C}'
 
     LINE_TYPES = {
         'LINE', 'LINE_MARKERS', 'LINE_STACKED', 'LINE_MARKERS_STACKED',
@@ -917,16 +956,27 @@ def run_quality_check(prs):
             if tbl_el is None:
                 continue
 
-            # 6. Bad table style GUID overrides cell-level paragraph alignment
+            # 6. Table style GUID checks.
+            #    a) Null GUID crashes LibreOffice 26 on PPTX import (BLOCKER).
+            #    b) OVERRIDE_STYLE silently overrides cell-level paragraph alignment.
             tbl_pr = tbl_el.find(qn('a:tblPr'))
             if tbl_pr is not None:
                 sid = tbl_pr.find(qn('a:tableStyleId'))
-                if sid is not None and sid.text and sid.text.strip().upper() == BAD_STYLE.upper():
-                    issues.append(
-                        f"{lbl} '{sn}': table uses built-in style {BAD_STYLE} "
-                        f"which overrides cell alignment — replace with None style GUID "
-                        f"{{00000000-0000-0000-0000-000000000000}}"
-                    )
+                if sid is not None and sid.text:
+                    sid_norm = sid.text.strip().upper()
+                    if sid_norm == NULL_STYLE.upper():
+                        issues.append(
+                            f"{lbl} '{sn}': table uses null GUID {NULL_STYLE} "
+                            f"— crashes LibreOffice 26 on PPTX import. Run "
+                            f"fix_table_style(table_shape) to set {SAFE_STYLE} "
+                            f"(\"No Style, No Grid\")."
+                        )
+                    elif sid_norm == OVERRIDE_STYLE.upper():
+                        issues.append(
+                            f"{lbl} '{sn}': table uses built-in style {OVERRIDE_STYLE} "
+                            f"which overrides cell alignment — run "
+                            f"fix_table_style(table_shape) to set {SAFE_STYLE}."
+                        )
 
             # 7. Table cell font size must be >= 14pt
             reported = False
@@ -1170,7 +1220,7 @@ Fix every reported issue before saving. Do not skip or suppress the check. Commo
 - **Chart fonts**: call `fix_chart_fonts(chart)` immediately after `add_chart()`
 - **Line legend**: set `chart.legend.position = XL_LEGEND_POSITION.RIGHT` and `include_in_layout = False`
 - **invertIfNegative**: add `<c:invertIfNegative val="0">` to each bar series element (see Bar Charts section above)
-- **Table style**: set `tableStyleId` element text to `{00000000-0000-0000-0000-000000000000}`
+- **Table style**: call `fix_table_style(table_shape)` to set the canonical safe GUID `{2D5ABB26-0587-4C30-8999-92F81FD0307C}` ("No Style, No Grid"). Never use the null GUID `{00000000-...}` — it crashes LibreOffice 26 on PPTX import.
 - **Table fonts**: call `fix_table_fonts(table_shape)` after populating the table
 - **Text box fonts**: increase to `Pt(22)` (target) or at minimum `Pt(20)`; if text does not fit, reduce content or split the slide rather than reducing font size
 - **Conversion coverage**: reclassify image-only slides as hybrid (text column native + image column embedded), native shapes (colored boxes, flowcharts, box-and-arrow diagrams), or native charts (bar/line/scatter) per Step 2 decision rules

@@ -43,7 +43,7 @@ The [style-guide.md](style-guide.md) file is a technical reference document with
 - **Color palette:** Matching the Beamer guide, with PPTX-specific usage notes
 - **Template loading pattern:** How to load the template, remove placeholder slides, and create content slides
 - **Beamer-to-PPTX conversion workflow:** Four-step process with decision rules for native shapes vs. image embed
-- **Helper functions:** `add_citation()`, `add_image_proportional()`, `fix_chart_fonts()`, `fix_table_fonts()`, `set_bullet()`, `set_hanging_indent()`, `estimate_text_height()`
+- **Helper functions:** `add_citation()`, `add_image_proportional()`, `fix_chart_fonts()`, `fix_table_fonts()`, `fix_table_style()`, `set_bullet()`, `set_hanging_indent()`, `estimate_text_height()`
 - **Chart rules:** Legend positioning, negative-value bar handling, number format requirements
 - **`run_quality_check(prs)` function:** 14 automated checks (bounds, overlap, chart fonts, legend position, table styles, vertical alignment, text overflow, and more)
 - **Implementation checklist:** Final verification before saving

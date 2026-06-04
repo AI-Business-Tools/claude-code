@@ -44,7 +44,7 @@ The knowledge base supports two document storage patterns:
 │   └── 2026-03-18 Author. Title._summary.md
 ```
 
-Topic folders are dynamic: any immediate subdirectory of the knowledge base root other than the inbox folder, any blog folder, and any `*_build/` directory is a topic folder. When scanning, search both patterns:
+Topic folders are dynamic: any immediate subdirectory of the knowledge base root other than the inbox folder, any blog folder, any auxiliary folders (for example, a recents or symlink folder, a search-index or database folder, or a documentation folder that describes the knowledge base process itself rather than holding indexable content), and any `*_build/` directory is a topic folder. When scanning, search both patterns:
 - Flat: `<topic-folder>/*_summary.md`
 - Subfolder: `<topic-folder>/*/*_summary.md`
 
@@ -96,7 +96,7 @@ Skip any path under a `materials/` subfolder. Report any issues found:
 
 - **Missing summaries:** source files without a corresponding `_summary.md`
 - **Orphaned summaries:** `_summary.md` files without a corresponding source file
-- **Naming inconsistencies:** files not matching the expected convention (the default is `YYYY-MM-DD Last. Title.ext`; adjust to whatever convention the `knowledge-base` skill uses on this system)
+- **Naming inconsistencies:** files not matching the expected convention (the default is `YYYY-MM-DD Last. Title.ext`; adjust to whatever convention the `knowledge-base` skill uses on this system). Optional: if your knowledge base intentionally lets legacy and current naming conventions coexist permanently, turn this check off so it does not propose the same renames on every run. The same applies to empty or sparse topic folders kept as deliberate placeholders; do not flag them as defects.
 - **Duplicate content:** files with very similar titles or content across different folders
 - **Topic suggestions:** documents that might fit better in a different folder based on their summary content
 - **Gaps:** topics with few sources where more research would strengthen the knowledge base

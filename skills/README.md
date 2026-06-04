@@ -8,7 +8,7 @@ Each skill is a self-contained workflow that Claude Code loads on demand when yo
 
 | Skill | What It Does |
 |-------|-------------|
-| [beamer](beamer/) | Generate LaTeX Beamer slide decks with TikZ figures and a four-step compile-audit-fix cycle |
+| [beamer](beamer/) | Generate, edit, audit, or convert-to-PPTX LaTeX Beamer slide decks with TikZ figures and a four-step compile-audit-fix cycle |
 | [slides-content](slides-content/) | End-to-end pipeline: source document (PDF, markdown, text) to compiled presentation slides |
 | [diagram-pdf](diagram-pdf/) | Generate standalone TikZ diagrams (pipelines, hierarchies, cycles, hub-and-spoke, thematic) compiled to PDF, with an independent audit agent |
 
@@ -25,7 +25,9 @@ Each skill is a self-contained workflow that Claude Code loads on demand when yo
 | Skill | What It Does |
 |-------|-------------|
 | [split-pdf](split-pdf/) | Split and deeply read academic PDFs in 4-page chunks to avoid shallow comprehension |
-| [knowledge-base](knowledge-base/) | Process, index, summarize, and query a personal document library |
+| [summary-academic](summary-academic/) | Summarize an academic paper into a fixed nine-section, citation-backed structure |
+| [summary-general](summary-general/) | Summarize a news article, blog post, video, or podcast, keeping the statistics and flagging weak claims |
+| [knowledge-base](knowledge-base/) | Process, index, summarize, search, and query a personal document library, and build slides from any item |
 | [knowledge-base-update](knowledge-base-update/) | Sync the knowledge-base index with disk; run a periodic health check |
 
 ### Process Guides
@@ -34,6 +36,12 @@ Each skill is a self-contained workflow that Claude Code loads on demand when yo
 |-------|-------------|
 | [writing-voice-guide](writing-voice-guide/) *(process guide)* | How to create a consistent writing voice layer for your AI environment |
 | [handoff-resume](handoff-resume/) *(protocol)* | Session continuity protocol for carrying project context across Claude Code sessions |
+
+### Administration
+
+| Skill | What It Does |
+|-------|-------------|
+| [skill-audit](skill-audit/) | Audit recent session transcripts for recurring friction and recommend conservative, report-only changes to your skills and configuration |
 
 ## Dependencies
 

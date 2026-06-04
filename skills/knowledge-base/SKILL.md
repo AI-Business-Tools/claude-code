@@ -1,7 +1,7 @@
 ---
 name: knowledge-base
-description: Personal knowledge base manager. Processes inbox files (PDF, MD, DOCX, RTF, TXT, HTML, PNG, URL), extracts metadata, renames with citation conventions, generates summaries, maintains a searchable index, answers questions grounded in indexed sources, and moves pipeline output into topic folders.
-triggers: kb, process inbox, kb ask, kb move, knowledge base
+description: Personal knowledge base manager. Processes inbox files (PDF, MD, DOCX, RTF, TXT, HTML, PNG, URL), extracts metadata, renames with citation conventions, generates summaries, maintains a searchable index, answers questions grounded in indexed sources, performs full-text keyword search, moves pipeline output into topic folders, and builds slide decks from indexed or external content via a slides skill.
+triggers: kb, process inbox, kb ask, kb move, kb search, kb find, kb slides, slides from kb, build slides from, knowledge base
 allowed-tools: Bash(python*), Bash(pip*), Bash(ls*), Bash(mv*), Bash(cp*), Bash(mkdir*), Bash(find*), Bash(wc*), Bash(file*), Bash(export*), Read, Write, Edit, Glob, Grep, WebFetch, WebSearch, Agent, Skill
 model: opus
 effort: high
@@ -67,7 +67,7 @@ knowledge-base/
 └── kb.md                         <- How the system works (human-readable reference)
 ```
 
-**Topic folders are dynamic.** The skill does not maintain a hardcoded list. Any immediate subdirectory of `knowledge-base/` (other than `aa-inbox/`, `aa-blog/`, `aa-recents/`, and `*_build/`) is treated as a topic folder. Adding a new folder requires no skill or config changes; running the [knowledge-base-update](../knowledge-base-update/) skill will discover it automatically.
+**Topic folders are dynamic.** The skill does not maintain a hardcoded list. Any immediate subdirectory of `knowledge-base/` (other than `aa-inbox/`, `aa-blog/`, `aa-recents/`, an optional full-text search folder such as `aa-search/`, an optional documentation folder that describes the system itself, and `*_build/`) is treated as a topic folder. Adding a new folder requires no skill or config changes; running the [knowledge-base-update](../knowledge-base-update/) skill will discover it automatically.
 
 **Conventions:**
 - Both patterns are valid; the index treats them identically.
@@ -77,6 +77,8 @@ knowledge-base/
 - Topic folders are created by the user; the skill suggests but does not create them without approval.
 
 ## Modes
+
+**Index-first gate (lookups and membership questions).** Any request to find, locate, recall, or check whether something is in the knowledge base (whether phrased as `kb ask`, `kb search`, "is X in my kb?", "what do I have on X?", or an informal question) must begin by consulting the index before reading or scanning topic folders directly. Read or `grep index.md`, and run a full-text search if you maintain one (Mode 4). Direct folder browsing is a fallback only, used after the index returns nothing relevant. Never answer a lookup from a folder scan you ran before checking the index.
 
 ### 1. Process Inbox (`/kb` or "process inbox")
 
@@ -273,8 +275,8 @@ Do not use the academic or general summary skill for blog posts. Inline this tem
 
 Answer questions grounded in the indexed knowledge base.
 
-#### Step 1: Read the index
-Read `index.md` to get the full document inventory with topics and one-line summaries.
+#### Step 1: Consult the index first (mandatory)
+Per the index-first gate above, start here before any folder scan. Read `index.md` for the full document inventory with topics and one-line summaries. If you maintain a full-text search index (Mode 4), also run `kb search <terms>` to surface body-text hits the one-line summaries miss. Only then proceed to Step 2.
 
 #### Step 2: Identify relevant sources
 Based on the question, select the 5-15 most relevant documents. Read their `_summary.md` files.
@@ -368,6 +370,73 @@ If the source directory is empty after the move, offer to remove it. If files re
 
 - Update `index.md` with a new entry derived from `_summary.md`.
 - Rebuild `aa-recents/` symlinks (same procedure as Mode 1).
+- If you maintain a full-text search index (Mode 4), reindex so the moved item becomes findable. Best-effort; do not block the move report on a reindex failure.
+
+### 4. Search (`kb search <query>`)
+
+Keyword search over the full body of every indexed `_summary.md` and `_text.md`, ranked by relevance. Use this when the request is "find me everything that touches X" rather than "answer this question." Q&A synthesis is not invoked.
+
+**Triggers:** `kb search <query>`, `kb find <query>`, `search kb for <query>`.
+
+This mode assumes a full-text index over the body content of the knowledge base. It is optional: if you have not set one up, fall back to `grep -r` over `_summary.md` and `_text.md` files, or use Q&A (Mode 2) instead. The reference implementation is a SQLite FTS5 database built from every `_summary.md` and `_text.md` and queried with BM25 ranking; any equivalent full-text indexer works. Wire your own indexer behind two commands:
+
+- **search** `<query>`: returns ranked hits, each with date, topic, author, title, type, a snippet with the matched terms highlighted, and the absolute path to the source file.
+- **reindex**: walks every topic folder and rebuilds the index from current `_summary.md` and `_text.md` content. It should run in well under a minute at a few hundred documents.
+
+Run the search, then relay the ranked output to the user verbatim, plus a one-line interpretation if the top hit is not obvious. Do not synthesize an answer from the snippets; that is Q&A's job.
+
+**When the index is empty or stale:** if the search returns nothing and the query terms are common, rebuild the index (reindex) from current source content and retry.
+
+**The index is authoritative; the full-text database is not.** `index.md` is the complete, append-maintained inventory of every document. The full-text database is a derived accelerator that may cover only a subset of the corpus (it typically skips build folders, hidden folders, and `materials/`). A document can be catalogued in `index.md` yet absent from the full-text index. Treat a search miss as "not in the full-text index," never as "not in the knowledge base."
+
+**Membership questions ("is X in the kb?") consult `index.md` directly.** Before concluding a document is absent, `grep index.md` for the title, author surname, or concept terms. The authoritative check is the `index.md` grep, not the full-text result.
+
+### 5. Slides (`kb slides <target>`)
+
+Build a slide deck from a knowledge base item, an inbox item, an external file path, or a URL. The skill resolves `<target>` to a single source file, runs the inbox flow if needed to produce `_summary.md` and `_text.md`, then hands off to your slides skill (which handles Pattern B to Pattern A promotion and reuses existing artifacts). This mode requires a slides skill that accepts a source path; if you do not have one, file the item with Mode 1 and run your slides workflow separately.
+
+**Triggers:** `kb slides <target>`, `slides from kb <target>`, `build slides from <target>`.
+
+`<target>` is one of:
+- A URL (starts `http://` or `https://`)
+- A filesystem path (absolute or relative) that exists
+- A name fragment (everything else)
+
+Any audience or style argument is passed through verbatim to your slides skill.
+
+#### Step 1: Resolve `<target>` to a single source file
+
+Resolve in this order:
+
+1. **URL** -> write a staging file at `aa-inbox/slides-YYYY-MM-DD-HHMMSS.urls` containing just that URL (one line). Continue at Step 2 (treated as an inbox item).
+2. **Existing path** -> use directly. Continue at Step 2.
+3. **Name fragment** ->
+   a. Search the corpus for the fragment (full-text search if you have one, otherwise `grep -r` over `_summary.md` files and `index.md`).
+   b. Independently `ls aa-inbox/` for filenames containing the fragment (case-insensitive substring match).
+   c. Combine results:
+      - **0 hits:** report not found and exit.
+      - **1 hit:** use that path; continue at Step 2.
+      - **2 or more hits:** present a numbered list (path, topic, one-line snippet) and wait for the user to pick.
+
+#### Step 2: Determine the case
+
+- **Case A: source is in `aa-inbox/`:** invoke the Mode 1 (Process Inbox) flow on this single item, with two overrides: (1) the deep-read agent retains the split build folder (do not delete it after writing `_text.md`, because the slides skill may re-extract from it); (2) the batch summary table applies as a single row, and the `Move these?` confirmation pause is preserved. After the user confirms the topic and the file moves, fall through to Case B with the new in-topic path.
+- **Case B: source is in a topic folder:** skip processing. Continue to Step 3.
+- **Case C: source is outside the knowledge base and outside the inbox:** skip processing. Continue to Step 3.
+
+#### Step 3: Existing-slides check
+
+Compute the prospective output directory per your slides skill's naming: `<parent>/<content_name>/`, where `<content_name>` is the source filename without extension. Check whether `<output_dir>/<content_name>_slides.pdf` exists. (For an item still at Pattern B, also check `<topic_folder>/<content_name>_slides.pdf`.)
+
+If a slide PDF is found, ask whether to rebuild (timestamp a backup of the existing PDF, then regenerate) or skip. On skip, exit without touching any file. If no slides exist, continue.
+
+#### Step 4: Hand off to your slides skill
+
+Invoke your slides skill, passing the resolved absolute source path and any audience or style argument. The slides skill is expected to reuse `_text.md` and `_summary.md` if present, promote Pattern B to Pattern A, and run its own compile and audit cycle.
+
+#### Step 5: Post-build sync
+
+After the slides skill reports completion, run the index-update hook (see Integration section): read `index.md`, search for the document by filename, append an entry if missing. The slide artifact does not get its own index entry; the source document's entry covers it. If Case A ran, the inbox flow already refreshed recents and the full-text index; if Case B or C ran, the source was already in the corpus, so no additional reindex is needed.
 
 ## Index Format
 
@@ -410,7 +479,7 @@ Updated by the [knowledge-base-update](../knowledge-base-update/) skill. The use
 ### Skills that consume knowledge-base data
 - **Your summary skills (academic/general)**: The user can request a full summary of any indexed document; the extract is not a substitute.
 - **Your blog writing skill**: Q&A mode can find relevant sources for post research.
-- **Your slides skill**: Indexed extracts can feed slide generation without re-reading source PDFs.
+- **Your slides skill**: Indexed extracts can feed slide generation without re-reading source PDFs. Mode 5 (`kb slides`) is the direct invocation path: it resolves a name fragment, path, or URL, runs the inbox flow if needed, then hands off to your slides skill.
 - **Your analyze-and-reply skill**: Q&A can identify relevant indexed sources to support or challenge forwarded content.
 - **Your chart skill**: Q&A answers involving data comparisons can generate charts.
 - **Your diagram skill**: System architecture and topic maps can be generated as standalone diagrams.

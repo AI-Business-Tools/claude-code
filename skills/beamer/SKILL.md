@@ -1,7 +1,7 @@
 ---
 name: beamer
-description: Beamer slide generation with citation strategy decision, code-first matplotlib figures, outline checkpoint with content inventory, audience-aware rhetoric, Devil's Advocate slides, code blocks, and transition slides. Quality audit runs as a single agent at the sonnet tier. Adapted from Scott Cunningham's beautiful_deck approach.
-triggers: beamer, beamer slides, deck
+description: Beamer slide generation with citation strategy decision, code-first matplotlib figures, outline checkpoint with content inventory, audience-aware rhetoric, Devil's Advocate slides, code blocks, and transition slides. Quality audit runs as a single agent at the sonnet tier. Beyond generate mode, it supports edit, audit, and convert-to-PPTX modes for working on a previously generated deck, including an optional PDF-vs-PPTX conversion audit. Edit mode auto-activates when the working directory contains a `*_build/slides.tex`. Adapted from Scott Cunningham's beautiful_deck approach.
+triggers: beamer, beamer slides, deck, edit beamer, revise beamer, fix beamer slides, audit beamer, convert beamer to pptx
 allowed-tools: Bash(pdflatex*), Bash(xelatex*), Bash(lualatex*), Bash(latexmk*), Bash(bibtex*), Bash(biber*), Bash(python*), Bash(pip*), Bash(pdftoppm*), Bash(cd*), Bash(mkdir*), Bash(ls*), Bash(cp*), Bash(mv*), Bash(rm*), Bash(which*), Bash(type*), Bash(kpsewhich*), Bash(tlmgr*), Bash(texhash*), Bash(mactex*), Bash(mktexlsr*), Bash(fmtutil*), Bash(updmap*), Bash(brew*), Bash(find*), Bash(system_profiler*), Bash(fc-list*), Bash(eval*), Bash(export*), Bash(cat*), Bash(grep*), Bash(head*), Bash(tail*), Bash(wc*), Read, Write, Edit, Glob, Grep, Agent
 argument-hint: [content-notes-or-summary] [audience=teaching|faculty|professional|consulting|working]
 ---
@@ -11,6 +11,8 @@ argument-hint: [content-notes-or-summary] [audience=teaching|faculty|professiona
 Generate an original Beamer presentation from source content (structured notes, summaries, or raw material). This skill handles the full cycle: audience triage, outline checkpoint, code-first figure generation, design, authoring the `.tex` file, compilation, and verification through multi-agent review.
 
 Six additions from Scott Cunningham's beautiful_deck approach are integrated: code-first figures (matplotlib), an outline checkpoint, audience-aware rhetoric, Devil's Advocate slides, code blocks, and transition slides.
+
+Beyond generating a new deck, the skill also works on an existing one through three additional modes (edit, audit, and convert-to-PPTX); see Mode Selection below. Edit mode auto-activates when the current working directory already contains a `*_build/slides.tex`.
 
 ## Input
 
@@ -28,6 +30,149 @@ If invoked standalone, ask the user what content to build slides from. If invoke
 Save all output files in the current working subdirectory. If no subdirectory has been established, create one named after the source material (for example, `slides_smith_2024/`).
 
 If figures are extracted from the source PDF, save them to `figures/` inside the working subdirectory, with original full-page renders in `figures/originals/`.
+
+---
+
+## Mode Selection
+
+Default mode: **generate** (build a new deck from source content). This skill also supports three additional modes for working with an existing deck. Generate-mode behavior is unchanged whether or not callers pass a `mode=` argument.
+
+**Edit mode** activates when ANY of the following is true:
+- The invocation includes `mode=edit`.
+- The user invoked via an edit, revise, or fix trigger ("edit beamer", "revise beamer", "fix beamer slides", "update beamer deck").
+- The current working directory contains a `*_build/slides.tex` and no `mode=generate` was passed.
+
+**Audit mode** (`mode=audit`, or an audit trigger) re-runs the Quality Audit pass against an existing compiled deck. No content edits beyond audit-fix remediation. Use when revisiting a deck after a long pause, or to confirm a previously generated deck still passes the checklist.
+
+**PPTX mode** (`mode=pptx`, or a "convert to pptx" trigger) runs only the PPTX conversion block against an existing compiled deck. No audit, no edits.
+
+| Mode | When it runs | What it does |
+|---|---|---|
+| `generate` | Default; new content provided | Full pipeline (Step 0 to Output). Unchanged from prior behavior. |
+| `edit` | Edit trigger, `mode=edit`, or CWD auto-detect | Locate existing deck, load context, present menu, apply edits, run Compilation Cycle, iteration prompt |
+| `audit` | `mode=audit` or audit trigger | Locate existing deck, load PDF and .tex, run Compilation Cycle Step 3 (Quality Audit) then Step 4 (Fix), report |
+| `pptx` | `mode=pptx` or "convert to pptx" trigger | Locate existing deck, run the Output PPTX conversion block |
+
+**In any non-generate mode:** skip everything from Step 0.1 through Figure Extraction (Step 0.1 Pre-flight Deliverable Check, Step 0.5 Audience Triage, Step 0.6 Citation Strategy, Step 0.7 Outline Checkpoint, Step 0.8 Code-First Figure Generation, Design Requirements, Content Requirements, Visual Mechanism Selection, Number Formatting, Acronyms and Abbreviations, Quality Standards, Figure Extraction). All of these are generate-time prep that does not apply to a previously generated deck. Jump from Step 0 (LaTeX verification) directly into the **Edit Mode** section below for the locate and load-context steps, then dispatch per the chosen mode. The Edit Mode E2 step is the entry-point backup counterpart to Step 0.1; running both would produce duplicate timestamped backups.
+
+**In generate mode:** proceed with every step as usual. There is no behavior change for workflows that call this skill in generate mode.
+
+**`audience=` in non-generate modes:** the `audience=` parameter only takes effect in generate mode (via Step 0.5 Audience Triage). In edit, audit, or pptx mode, `audience=` is silently ignored; the deck's audience-specific structure was set at generate time and is not reconfigurable mid-flight. To use a different audience template, regenerate the deck from scratch with `mode=generate`.
+
+**Auto-detection ambiguity:** if the CWD contains multiple `*_build/slides.tex` subdirectories, auto-detection still fires (edit mode is chosen), and Step E1 below prompts the user to pick which deck.
+
+**Trigger vs CWD-auto-detect precedence:** if the user invokes via an explicit generate trigger ("create beamer slides", "generate beamer deck", "make latex slides", "beamer presentation from this") AND new source content is provided in the same turn, run generate mode even if the CWD contains a `*_build/slides.tex`. Auto-detect only fires when the invocation is ambiguous (no explicit trigger family, or no source content). Rationale: a user who explicitly asks to create new slides in a directory that happens to already contain a deck is starting a second deck, not editing the first.
+
+---
+
+## Edit Mode
+
+This section runs when the skill is invoked in `edit`, `audit`, or `pptx` mode (per Mode Selection above). It performs the locate-and-load steps, presents the menu when in edit mode, and dispatches into the relevant Compilation Cycle and Output blocks. **Skip this entire section in generate mode.**
+
+### E1: Locate the Output and Build Subdirectories
+
+The base directory is **the current working directory** at the time the skill is invoked.
+
+**If the user specifies a file or folder name:**
+- If the user provides a source file name (for example, `smith_2024.pdf`), look for the matching output subdirectory (for example, `smith_2024/`) and its build subdirectory (for example, `smith_2024/smith_2024_build/`).
+- If the user provides a subdirectory name directly (for example, `smith_2024`), use that as the output subdirectory and look for `<name>_build/` inside it.
+
+**If no name is provided:** list the subdirectories in the current working directory that contain a `*_build/slides.tex` file. If exactly one is found, use it. If multiple are found, present the list and ask the user to pick. If none are found, report the error and stop.
+
+**Validation:** confirm that `slides.tex` exists in the build subdirectory. If it does not, report the error and stop.
+
+### E2: Pre-flight Deliverable Check (entry-point backup)
+
+Before loading context or applying any edits, check for existing deliverable files that would be overwritten in this session:
+
+1. Use Glob in the **output subdirectory** to find `<content_name>_slides.pdf` and `<content_name>.pptx`.
+2. Use Glob in the **build subdirectory** to find `slides.pdf` and `slides_tmp.pdf`.
+
+If any of these already exist, create timestamped backups (`cp "<file>" "<file_without_ext> YYYY-MM-DD-HHMMSS.<ext>"`) before proceeding, and report: "Backed up existing deliverables: [list]"
+
+This is the entry-point counterpart to Step 0.1 (which covers generate mode). The Compilation Cycle and Output backup-before-overwrite rules then cover every subsequent overwrite within the session, including between audit-fix iteration rounds.
+
+If none exist, proceed silently.
+
+### E3: Load Context
+
+Read the following files (silently skip any that do not exist):
+
+From the **build subdirectory** (`<name>_build/`):
+1. **`notes.md`**: deep-reading extraction notes
+2. **`slides.tex`**: the current Beamer source
+3. **`figures/`**: if this directory exists, note it silently. The existing figures are available for reference in the `.tex` source; do not move or rename them. If the user's edits require adding new figures from the source PDF, follow the Figure Extraction protocol later in this skill (pdftoppm at 300 DPI, PIL crop, save to `figures/`, originals to `figures/originals/`).
+
+From the **output subdirectory**:
+4. **`<content_name>_summary.md`**: structured summary (filename matches the output subdirectory name)
+
+**Do not load the PDF at this stage.** The compiled PDF is only needed for the quality audit. If the dispatched path requires it (audit mode, or edit-mode menu option 2), load it then, gated to the four-page rule: if the compiled deck is **4 pages or fewer**, read it directly in the main thread; if it is **more than 4 pages**, do not read it in the main thread. The Compilation Cycle Step 3 audit agent reads the full compiled PDF itself inside a subagent, so the main thread does not need the page images at all; hand off to Step 3 without a main-thread read. For all other paths, `slides.tex` is sufficient.
+
+### E4: Mode Dispatch
+
+Branch on the active mode:
+
+- **`mode=audit`**: jump directly to Compilation Cycle Step 3 (Quality Audit), which loads the full compiled PDF itself inside its audit subagent; no main-thread PDF read is needed here. After Step 4 (Fix and Recompile) completes, proceed to Output. Skip the menu in E5.
+- **`mode=pptx`**: jump directly to the Output section's PPTX conversion block. Skip the menu in E5.
+- **`mode=edit`**: continue to E5.
+
+### E5: Present Menu (edit mode only)
+
+After loading context, **pause and present this menu** to the user:
+
+> "Loaded slides for *[title]*. The deck has [N] slides.
+> Available context: [list which of notes.md, summary.md, slides.pdf were loaded]
+>
+> What would you like to do?
+> 1. **Edit the slides**: make content, layout, or style changes and recompile
+> 2. **Run the quality audit**: read the compiled PDF slide-by-slide and report visual or formatting issues
+> 3. **Convert to PPTX**: convert the existing compiled PDF to a styled PowerPoint file
+> 4. **Something else**: describe what you need"
+
+**Wait for user response.** Then route:
+
+| Choice | Action |
+|--------|--------|
+| 1. Edit | Continue to E6 (Response Discipline), then apply edits in E7, then proceed to Compilation Cycle Step 1. E8 iteration prompt fires after Step 4. |
+| 2. Quality audit | Jump to Compilation Cycle Step 3, whose audit agent loads the full compiled PDF itself inside a subagent; no main-thread PDF read is needed. **Treat the rest of the flow as audit mode for E8 purposes; do not return to E8 after Step 4.** The user picked audit-only and expects to land at Output, not back at the iteration menu. |
+| 3. PPTX | Jump to the Output section's PPTX conversion block. Skips Compilation Cycle entirely; E8 does not fire. |
+| 4. Something else | Clarify with the user, then proceed accordingly. If the clarification resolves to one of choices 1 to 3, follow that choice's E8 rule. |
+
+### E6: Response Discipline (edit mode only)
+
+When the user reports a visual problem, defect, or issue with the slides:
+
+1. **Read the relevant slides** in the compiled PDF to verify the problem, gated to the four-page rule. If the compiled deck is **4 pages or fewer**, read it directly in the main thread. If it is **more than 4 pages**, do not read it in the main thread: split it into 4-page chunks with the **split-pdf** skill and launch a subagent to read the chunk(s) covering the reported slide(s). Instruct the subagent to return slide-level detail (for each slide in scope: the slide title, the verbatim text, numbers, and labels involved, and a concrete visual description of the defect, namely what overlaps, clips, overflows, or is mispositioned, and where on the slide), not a one-line summary. You need enough fidelity to locate and fix the exact element in `slides.tex`.
+2. **Describe what you found** and propose a specific fix.
+3. **End with a question:** "Should I apply this fix?" or "How would you like to handle this?"
+4. **Do not edit `slides.tex` in the same response.** Wait for the user's approval before making any file changes.
+
+This applies whether the problem was reported via screenshots, verbal description, or discovered during the quality audit. The user may want to handle the fix differently, redirect to a different priority, or provide additional context that changes the approach.
+
+### E7: Apply Edits (edit mode only)
+
+Apply the user's requested edits to `slides.tex` in the build subdirectory. Follow the Beamer style guide at `../../style-guides/beamer/style-guide.md` for all design decisions. Read it before making any edits if not already loaded. Use the loaded `notes.md` (from build) and `<content_name>_summary.md` (from output) as source material when the user asks to add, expand, or rework content.
+
+**Edit types** (handle any combination):
+- **Content changes**: add, remove, reorder, or reword slides or bullet points
+- **Figure or chart changes**: modify TikZ diagrams, pgfplots charts, data values, labels, colors
+- **Layout changes**: split dense slides, merge sparse slides, change column widths
+- **Style changes**: adjust colors, fonts, spacing (within the style guide)
+- **Structural changes**: add new slides, remove slides, change slide order
+
+After edits are written, proceed to Compilation Cycle Step 1.
+
+### E8: Iteration Prompt (edit mode only)
+
+After Compilation Cycle Step 4 completes in edit mode, before proceeding to Output, ask:
+> "Edits applied and recompiled. Would you like to make further changes, or are you done?"
+
+- If the user requests more edits: loop back to E5 (or E6 if a specific problem is reported).
+- If the user is done: proceed to Output and stop after the deliverable PDF copy.
+
+**Do not raise PPTX in this prompt.** PPTX is offered at most once, at the end of the turn that first delivers the deck, and is never re-asked across edit iterations or later turns. If the user wants PowerPoint, they will ask ("pptx this deck") or pass `mode=pptx`, which routes to the Output PPTX conversion block at any time.
+
+This iteration prompt does not fire in generate, audit, or pptx modes.
 
 ---
 
@@ -656,6 +801,16 @@ If the audit found zero issues, no report is needed; proceed silently to Output.
 
 ---
 
+## Re-audit on Content Change
+
+If slides are added, removed, or substantially edited after Step 3 (Quality Audit) has already run in the current session, return to Step 3 and re-run the full audit on the modified deck before producing the final deliverable. A slide-count change between the initial audit and the deliverable is the explicit trigger.
+
+Re-run the full audit, not a spot check on new slides only. Content changes can shift adjacent slides and introduce side effects: new hyphenations from text reflow, new overfull boxes from added items, citation drift, and frame-number renumbering breaking cross-references.
+
+Skip the re-audit only when post-audit edits are limited to whitespace, comments, or single-character typo fixes that cannot affect layout. When in doubt, re-audit; one subagent call is cheap, a defect shipped is not.
+
+---
+
 ## Output
 
 ### Build artifacts (stay in `_build/`)
@@ -694,6 +849,57 @@ my_project/                              <-- parent folder
 **Confirm with the user:** "Beamer slides compiled and verified. Deliverable saved as `<base_name>_slides.pdf`. Ready to convert to PowerPoint?" (if part of a slides workflow) or "Beamer slides complete. Deliverable saved as `<base_name>_slides.pdf`." (if standalone).
 
 **PPTX conversion:** When converting to PowerPoint, follow the Beamer-to-PPTX Conversion Workflow in `../../style-guides/pptx/style-guide.md` exactly. This includes reading the .tex source and PDF, creating a per-slide conversion plan with native/hybrid/image categorization, presenting the plan for approval, using all font size specifications (18pt body floor, 14pt table/chart floor), calling the quality check function before saving, and fixing all reported issues before the file is written. Do not write ad-hoc conversion code that bypasses this workflow.
+
+### PDF-vs-PPTX Conversion Audit (optional, offered after every PPTX conversion)
+
+After the PPTX is saved, **always offer** a comparison audit:
+
+> "Run a PDF-vs-PPTX conversion audit? This compares the compiled Beamer PDF against the saved PPTX slide-by-slide and reports text, chart, table, and image divergences. Report-and-ask only, no auto-fix. Adds about 2 to 5 minutes. (yes / skip)"
+
+If the user picks `skip`, proceed to the Session Log.
+
+If the user picks `yes`:
+
+1. **Launch a comparison agent** (Agent tool, `subagent_type: general-purpose`) on a strong model. The audit is exhaustive rule-application across slides, the same rationale as the Compilation Cycle Step 3 audit tier. The agent prompt must include the absolute path to the compiled Beamer PDF, the absolute path to the saved PPTX, the comparison dimensions below, and the report format below.
+
+2. **Comparison dimensions the agent checks slide-by-slide:**
+   - **Slide count match.** PDF and PPTX have the same number of slides; report any extra or missing slides with their positions.
+   - **Slide title match.** The frametitle in the PDF appears as the slide title in the PPTX (verbatim or with the same words).
+   - **Body text content.** Every body bullet, paragraph, and callout in the PDF appears in the PPTX. Watch for truncations, dropped bullets, and reflowed content.
+   - **Numeric content.** Every number, percentage, dollar amount, year, citation date, statistical value, and coefficient in the PDF appears in the PPTX with the same value. This catches the most consequential conversion defects (for example, "47%" rendered as "4.7%", or "$1.2B" as "$1.2M").
+   - **Table contents.** Every table cell in the PDF appears in the PPTX with the same value, including header and footnote rows.
+   - **Chart values.** For pgfplots and matplotlib charts, the bar heights, line points, labels, and axis ranges in the PPTX render match the PDF. The agent extracts chart values from `python-pptx` (native chart) or compares visually (image embed).
+   - **Image presence.** Every `\includegraphics{}` figure in the PDF appears in the PPTX at the correct slide position.
+   - **Citation footers.** Every footer citation in the PDF appears as a footer text box in the PPTX.
+   - **Color palette.** Spot-check that key colored elements (headers, callouts, row shading) carry the correct palette colors from the style guide.
+
+3. **How the agent does the comparison.**
+   - Read the PDF with the Read tool (in chunks for long decks via the `pages` parameter).
+   - Use `python-pptx` to extract text, table cells, chart data, and image references from the PPTX programmatically (cheap and exact for text content).
+   - For visual content (chart appearance, image placement, color correctness): render the PPTX to PDF via `soffice --headless --convert-to pdf "<pptx_path>" --outdir "<build_dir>"` and read the resulting PDF page-by-page alongside the Beamer PDF. Reuse any verification PDF the conversion already produced.
+   - Cross-reference every dimension above against the matching slide in both formats.
+
+4. **Report format.** The agent returns a numbered findings list, one entry per divergence, with the slide number, dimension, what was in the PDF, what was in the PPTX, and a one-line proposed fix:
+
+   > **PDF-vs-PPTX Audit: [N] divergences found:**
+   >
+   > 1. **Slide 7** (numeric content): PDF shows "47% adoption rate"; PPTX shows "4.7%". Likely a decimal-point insertion during text extraction. Fix: edit the slide 7 text run in the PPTX to read "47%".
+   > 2. **Slide 12** (table contents): PDF table row 3 column 2 reads "$1,247M"; PPTX cell reads "$1,247". Trailing "M" dropped. Fix: append "M" to the cell.
+   > 3. **Slide 15** (chart values): PDF bar chart shows bars at [12, 24, 36, 48]; PPTX shows [12, 24, 36, **45**]. Fix: set chart series position 4 to 48.
+
+   If the agent finds zero divergences, it reports: `PDF-vs-PPTX Audit: all [N] slides match. No divergences found.`
+
+5. **Present findings and ask.** After the agent returns, present the numbered list to the user and ask:
+
+   > "How would you like to handle these? Apply all fixes, pick per-finding (list numbers), or skip and accept the current PPTX as-is?"
+
+   - **Apply all:** re-run the PPTX conversion workflow with the findings list as input, or apply scoped text and cell edits directly via `python-pptx`. Back up the prior PPTX with a timestamp before re-saving.
+   - **Per-finding:** prompt the user for the comma-separated numbers; apply only those.
+   - **Skip:** report "Accepted PPTX as-is" and proceed to the Session Log.
+
+6. **After fixes are applied,** re-run the comparison audit once and report whether all selected findings are resolved. If any remain (rare; usually because the proposed fix was wrong or introduced a new divergence), report them and ask again, same loop. Cap at two re-run passes; on the third, report the residual findings and ask the user to handle manually.
+
+This audit is offered after **every** PPTX conversion regardless of mode (generate, edit, audit, pptx). It is the only place in this skill where audit findings are presented for user approval rather than auto-fixed; conversion divergences are often judgment calls (LaTeX-versus-Office rendering drift on subtle visual elements may not be a defect), so the user is the right decider.
 
 ---
 

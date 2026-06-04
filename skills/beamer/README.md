@@ -101,6 +101,16 @@ If no audience is specified, defaults to **teaching lecture** (Logos 45% / Ethos
 
 **As part of a larger workflow:** If notes and a summary already exist in the working subdirectory (produced by an upstream skill), the skill reads them directly without prompting.
 
+### Working on an existing deck (edit, audit, and PPTX modes)
+
+Generating a deck is the default. The skill also works on a deck it produced earlier through three additional modes:
+
+- **Edit** (`mode=edit`, an edit/revise/fix trigger, or auto-detected when the working directory already contains a `*_build/slides.tex`): loads the existing source and context, presents a menu (edit, run the quality audit, or convert to PPTX), applies your changes, and runs the full compilation and audit cycle. If you report a visual defect, the skill reads the relevant slides, proposes a fix, and waits for approval before editing.
+- **Audit** (`mode=audit` or an audit trigger): re-runs the quality audit against an already-compiled deck and applies fixes, without other content changes. Useful for revisiting a deck after a pause.
+- **PPTX** (`mode=pptx` or "convert to pptx"): converts the compiled PDF to a styled PowerPoint via the PPTX style guide workflow.
+
+After any PPTX conversion, the skill offers an optional **PDF-vs-PPTX conversion audit**: a slide-by-slide comparison that flags text, numeric, table, chart, image, and citation divergences between the Beamer PDF and the saved PPTX, then asks how to handle each finding. This is report-and-ask, not auto-fix, because conversion divergences are often judgment calls.
+
 ### Build directory convention
 
 The skill expects a `_build/` subdirectory inside the project folder. Name it `<parent_folder_name>_build/`. For example, a project in `2026-03-ai-energy/` gets a build folder at `2026-03-ai-energy/2026-03-ai-energy_build/`. The deliverable PDF is placed in the parent folder as `<base_name>_slides.pdf`.

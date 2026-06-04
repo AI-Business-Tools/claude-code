@@ -35,6 +35,12 @@ Answers questions grounded in indexed sources. Reads the index, selects the 5-15
 **Move Project (`kb move <source_dir> <topic>`)**
 Files the output of a content skill (slides, summary, etc.) that ran outside the knowledge base. Inventories artifacts, renames them to citation convention, determines whether to use flat or subfolder storage, moves everything, and updates the index.
 
+**Search (`kb search <query>`)**
+Keyword search over the full body of every summary and text extraction, for the "find me everything that touches X" question rather than "answer this." Returns ranked hits with snippets and file paths, and does not synthesize. This mode is optional and assumes a full-text index (the reference implementation is a SQLite FTS5 database; any equivalent works, and `grep -r` is the fallback). The index is treated as a fast accelerator over the authoritative `index.md`, never as the source of truth for what the knowledge base contains.
+
+**Slides (`kb slides <target>`)**
+Build a slide deck from a knowledge base item, an inbox item, a file path, or a URL in one step. The skill resolves the target to a single source file, runs the inbox flow first if the item is not yet processed, then hands off to your slides skill. Requires a slides skill that accepts a source path.
+
 ## Design Rationale
 
 **Agent-per-item architecture.** Each inbox item runs in its own subagent. This prevents content and image accumulation from hitting API request size limits on large batches. It also forces the parent to read and inline the correct summary format before launch, preventing improvised summaries that drift from the knowledge base's format standards over time.
@@ -64,6 +70,10 @@ Files the output of a content skill (slides, summary, etc.) that ran outside the
 6. **Ask questions with `/kb ask [question]`.** The skill reads the index and relevant summaries, then synthesizes a cited answer.
 
 7. **File pipeline output with `kb move`.** When a slides or summary skill runs on a document outside the knowledge base, use `kb move` to file the artifacts into the appropriate topic folder.
+
+8. **Find things with `kb search <query>`.** For "what do I have that touches X," run a keyword search over the body of every summary and extraction. Optional; set up a full-text index (or rely on the `grep -r` fallback) as described in SKILL.md.
+
+9. **Build slides with `kb slides <target>`.** Point it at a knowledge base item, an inbox file, a path, or a URL, and it resolves the source, processes it if needed, and hands off to your slides skill.
 
 ## Output
 

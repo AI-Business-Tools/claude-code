@@ -1,6 +1,15 @@
 # Claude Code
 
-Claude Code skills for business professionals and educators.
+A getting-started guide and a skills library for business professionals and educators.
+
+## Start here
+
+New to this repository? Work through it in order:
+
+1. **[Get started](getting-started/).** What Claude Code adds beyond Claude chat and Cowork, how to install it on Mac or Windows, and how to set up your first project.
+2. **[Set up version history](skills/git-sync/).** Put your Claude Code environment under Git and sync two machines through a private GitHub repository, so every change to your skills and standards is tracked and reversible.
+3. **[Adopt handoffs and resume](skills/handoff-resume/).** End each session with a structured summary so the next one picks up where you left off.
+4. **[Browse the skills](skills/).** Reusable workflows for slides, documents, analysis, and knowledge management.
 
 ## About
 
@@ -32,20 +41,23 @@ This repository publishes the skills, templates, and methodology behind that app
 | Layer | Purpose | Example |
 |-------|---------|---------|
 | **Rules** (CLAUDE.md) | Declarative constraints loaded every session | Writing standards, routing tables, delivery gates |
-| **Reinforcement** (Memories) | Corrections and preferences that persist across sessions | "Do not mock the database in integration tests" |
+| **Reinforcement** (Memories) | Corrections and preferences that persist across sessions | "Save each project's deliverables to the top level of its folder" |
 | **Execution** (Skills) | Procedural workflows loaded on demand | PDF-to-slides pipeline, exercise generator |
 | **Enforcement** (Audit Agents) | Post-hoc quality checks that catch what the compiler misses | Beamer overlay audit, anonymization checklist |
 
 See [methodology.md](methodology.md) for the full design rationale.
 
-## Quick Start
+## Set up your environment
 
-1. **Install Claude Code** from [Anthropic](https://docs.anthropic.com/en/docs/claude-code)
-2. **Copy the template**: start with [CLAUDE-template/CLAUDE.md](CLAUDE-template/CLAUDE.md) and customize it for your identity, writing standards, and workflow
-3. **Install skills**: most skills install by copying `SKILL.md` into `~/.claude/skills/<skill-name>/SKILL.md`. Two skills install differently: `writing-voice-guide` is a process guide (read its `README.md` and follow the steps to build your own voice skill), and `handoff-resume` installs by pasting `protocol.md` content into your `CLAUDE.md`. Each skill's README documents its own install steps.
-4. **Start working**: skills activate automatically when your request matches their triggers
+The foundations the rest of this repository builds on. The [Getting Started guide](getting-started/) walks a newcomer through them, or you can go straight to each:
+
+- **[git-sync](skills/git-sync/)** *(recipe)*. Version your `~/.claude` environment with Git and keep two machines in sync through a private GitHub repository. You get history, diffs, and one-command revert on your skills, standards, and memory. Point Claude Code at the directory and it can do the setup for you.
+- **[handoff-resume](skills/handoff-resume/)** *(protocol)*. Carry project context across sessions: end with a structured summary, and start the next session by reading it back.
+- **[CLAUDE-template](CLAUDE-template/CLAUDE.md)**. A starting `CLAUDE.md` to copy and customize for your identity, writing standards, and workflow.
 
 ## Skills
+
+Task-specific workflows, each loaded on demand when your request matches its triggers. Most install by copying `SKILL.md` into `~/.claude/skills/<skill-name>/SKILL.md`; `writing-voice-guide` is a process guide you follow to build your own voice layer. Each skill's README documents its own install steps.
 
 | Skill | Description | Details |
 |-------|-------------|---------|
@@ -58,7 +70,8 @@ See [methodology.md](methodology.md) for the full design rationale.
 | [analyze-reply](skills/analyze-reply/) | Fact-check a forwarded article, essay, or email and draft a reply in your voice | Pairs with a writing voice layer |
 | [diagram-pdf](skills/diagram-pdf/) | Generate standalone TikZ diagrams (pipelines, hierarchies, cycles, hub-and-spoke, thematic) | Independent audit agent verifies layout |
 | [writing-voice-guide](skills/writing-voice-guide/) | How to create your own writing voice layer | Process guide, not a skill file |
-| [handoff-resume](skills/handoff-resume/) | Session continuity: structured handoffs and context reconstruction | Protocol for multi-session projects |
+
+For the full catalog grouped by purpose, including `summary-academic`, `summary-general`, `knowledge-base-update`, and `skill-audit`, see [skills/README.md](skills/README.md).
 
 ## Style Guides
 

@@ -1,0 +1,49 @@
+# Track only the authored parts of your Claude Code environment. Ignore
+# everything else by default, so new caches or runtime folders Claude Code
+# creates later are never committed by accident.
+#
+# Copy this file to ~/.claude/.gitignore (it is shipped as gitignore.sample so
+# it does not take effect inside the recipe's own directory).
+
+# 1) Ignore everything at the top level to start...
+/*
+
+# 2) ...then add back the authored files and folders you DO want tracked:
+!/.gitignore
+!/CLAUDE.md
+!/CLAUDE.local.md
+!/settings.json
+!/settings.local.json
+!/keybindings.json
+!/skills/
+!/scripts/
+!/protocols/
+!/changelog/
+!/hooks/
+
+# The two sync scripts from this recipe live at the root of ~/.claude:
+!/claude-*.sh
+
+# Add a line like the one above for any other file you author at the root of
+# ~/.claude and want tracked, for example: !/my-notes.md
+
+# 3) Auto-memory only: track ~/.claude/projects/*/memory/, nothing else under
+#    projects/ (the rest is per-session transcripts and runtime state).
+!/projects/
+/projects/*
+!/projects/*/
+/projects/*/*
+!/projects/*/memory/
+
+# 4) Even inside tracked folders, never track these:
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+*.bak
+
+# 5) Never commit secrets, wherever they appear:
+.env
+*.key
+*.pem
+.credentials.json

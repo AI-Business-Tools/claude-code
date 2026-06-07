@@ -36,6 +36,7 @@ Each skill is a self-contained workflow that Claude Code loads on demand when yo
 |-------|-------------|
 | [writing-voice-guide](writing-voice-guide/) *(process guide)* | How to create a consistent writing voice layer for your AI environment |
 | [handoff-resume](handoff-resume/) *(protocol)* | Session continuity protocol for carrying project context across Claude Code sessions |
+| [git-sync](git-sync/) *(recipe)* | Version your `~/.claude` environment with Git and sync two machines through a private GitHub repository |
 
 ### Administration
 

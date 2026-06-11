@@ -185,23 +185,32 @@ The agent does not read these files itself; the parent reads them before launch 
 
 Save as `<filename>_summary.md` alongside the source file. The summary is the analytical reference artifact; the index entry is derived from it.
 
-#### Step 5: Suggest topic folder
+#### Step 5: File items and report
 
 **This step runs in the parent conversation** after all item agents have completed.
 
-Read `topics.md` (if it exists) and `index.md` to understand existing categories. Suggest which topic folder the file belongs in. Present all processed files with suggestions:
+Read `topics.md` (if it exists) and `index.md` to understand existing categories, then determine the best-fit topic folder for each item. **Do not pause for confirmation.** File each item into its best-fit folder immediately, update the index, recents, and search, and then report what was filed and invite redirection. The user corrects after the fact rather than approving before; see "Correcting a filing" below.
 
-> **Processed 3 files from inbox:**
+**Folder selection:**
+- If an item clearly fits an existing topic folder, file it there.
+- If no existing folder is a clear fit, file it into your overflow folder (for example, `other-articles/`) and flag it in the report so the user can redirect (including to a new folder). **Never auto-create a topic folder.** A new folder is created only when the user names one in a redirect.
+- If an item was flagged as a likely duplicate during the scan (flow step 1), do **not** auto-file it. Leave it in `aa-inbox/`, report it as a probable duplicate of the existing entry, and wait for direction (file anyway, or discard).
+
+**File each item:** move the source file, its `_text.md`, and its `_summary.md` to the target folder. **Update `index.md` immediately after each item is moved** (not deferred to a later sync). Each new entry gets a one-line summary derived from the `_summary.md`. The index must stay current as items are processed so that subsequent Q&A and topic decisions reflect the latest state.
+
+**Report (after filing).** Present all filed items with the folder each landed in and the reason:
+
+> **Filed 3 items from inbox:**
 >
-> | # | Renamed file | Type | Suggested topic | Why |
+> | # | Renamed file | Type | Filed to | Why |
 > |---|---|---|---|---|
 > | 1 | `2026-03-15 Autor. The Labor Market Impacts of AI.pdf` | 24pp PDF | **AI-employment/** | labor economics, AI impact on wages |
 > | 2 | `2026-02-28 Mollick. Why Students Need AI Tutors.pdf` | 8pp PDF | **AI-teaching/** | AI in education, pedagogy |
-> | 3 | `2025-12-01 Cowen. Economic Growth in 2026.pdf` | markdown | **other-articles/** | macroeconomics, not AI-specific |
+> | 3 | `2025-12-01 Cowen. Economic Growth in 2026.md` | markdown | **other-articles/** | no clear existing-folder fit; filed to overflow (flagged) |
 >
-> Move these? Or specify different destinations.
+> Filed as above. To move any, say "move `<item>` to `<folder>`" and I will re-file.
 
-**Always use the full renamed filename** (with date prefix) in the summary table. The date prefix is essential for sorting and identification.
+**Always use the full renamed filename** (with date prefix) in the report table. The date prefix is essential for sorting and identification.
 
 **Rate usage report:** After presenting the batch summary table, always include a rate usage report. This is mandatory regardless of whether items were processed by subagents or directly in the parent conversation.
 
@@ -218,8 +227,6 @@ Report each agent's item name, page count, token usage, and wall-clock time:
 
 Token counts come from the agent task notification `total_tokens` field. Wall time is the elapsed time from launch to the last agent completing (parallel agents share wall time). All items go through subagents, so this format applies to every run.
 
-After the user confirms, move each file and its `_text.md` and `_summary.md` to the target folder. **Update `index.md` immediately after each item is moved** (not deferred to a later sync). Each new entry gets a one-line summary derived from the `_summary.md`. The index must stay current as items are processed so that subsequent topic suggestions and Q&A reflect the latest state.
-
 **Update `aa-recents/`** after all moves are complete. This folder contains symlinks to the 10 most recently added items (by date added, not publication date). Numbered `01` through `10`, most recent first. Each symlink points to the item's `_summary.md` (or source `.md` if no separate summary exists).
 
 Rebuild procedure (overwrite all symlinks each time):
@@ -227,7 +234,17 @@ Rebuild procedure (overwrite all symlinks each time):
 2. For each of the 10 most recent items, create: `ln -sf <absolute_path_to_summary> knowledge-base/aa-recents/NN Author. Short Title_summary.md`
 3. Use short, readable names (no date prefix needed since the number provides recency order).
 
-If a file does not fit any existing folder, suggest creating a new one and describe its scope.
+**Refresh the full-text search index** (if you maintain one; Mode 4) after all moves and the recents rebuild, so the new items become findable. Best-effort; do not block the user-visible report on a reindex failure.
+
+#### Correcting a filing
+
+When the user redirects an item after it was auto-filed ("move `<item>` to `<folder>`", "that belongs in `<folder>`", or equivalent):
+
+1. Move the item's files (source, `_summary.md`, and `_text.md` if present; for a Pattern A item, the whole per-document subfolder) into the named topic folder. If the named folder does not exist, create it (the user naming it is the approval) and add a one-line scope description to `topics.md`.
+2. Edit the **Topic cell of the existing `index.md` row** for that item; do not add a new row.
+3. Rebuild `aa-recents/` and refresh the full-text search index if you maintain one (same procedures as above).
+
+Sources are never deleted, so re-filing is fully reversible.
 
 ### Blog Post Processing (aa-blog/)
 
@@ -402,7 +419,7 @@ Build a slide deck from a knowledge base item, an inbox item, an external file p
 - A filesystem path (absolute or relative) that exists
 - A name fragment (everything else)
 
-Any audience or style argument is passed through verbatim to your slides skill.
+Any structure or style argument is passed through verbatim to your slides skill (for the slides skills in this repository, that is `structure=` and `register=`, with `audience=` as a deprecated alias).
 
 #### Step 1: Resolve `<target>` to a single source file
 
@@ -420,7 +437,7 @@ Resolve in this order:
 
 #### Step 2: Determine the case
 
-- **Case A: source is in `aa-inbox/`:** invoke the Mode 1 (Process Inbox) flow on this single item, with two overrides: (1) the deep-read agent retains the split build folder (do not delete it after writing `_text.md`, because the slides skill may re-extract from it); (2) the batch summary table applies as a single row, and the `Move these?` confirmation pause is preserved. After the user confirms the topic and the file moves, fall through to Case B with the new in-topic path.
+- **Case A: source is in `aa-inbox/`:** invoke the Mode 1 (Process Inbox) flow on this single item, with two overrides: (1) the deep-read agent retains the split build folder (do not delete it after writing `_text.md`, because the slides skill may re-extract from it); (2) the Step 5 file-then-report behavior applies as a single row: the item is auto-filed into its best-fit folder with no confirmation pause, exactly as in Mode 1, and the "Correcting a filing" path is available if the user redirects. After the item is auto-filed, fall through to Case B with the new in-topic path.
 - **Case B: source is in a topic folder:** skip processing. Continue to Step 3.
 - **Case C: source is outside the knowledge base and outside the inbox:** skip processing. Continue to Step 3.
 

@@ -123,18 +123,25 @@ Start from `default` theme and override everything:
 \setbeamerfont{block title}{size=\normalsize,series=\bfseries}
 ```
 
-### Minimum Font Sizes for TikZ Content
+### Font Sizing: Fill First, Then Clamp at the Floor
 
-When creating TikZ diagrams, charts, and visual elements on slides, use these minimum sizes:
+**Design sequence (mandatory):** lay out the slide's content, set every text element at the largest size that fits the frame attractively, and only then apply the floors below as a clamp. A floor is the smallest size an element may reach under genuine density pressure; it is never the starting size. Writing the floor as the default is the recurring under-fill defect this section exists to prevent: a deck uniformly at `\footnotesize`/`\small` with whitespace bands around the content is wrong even though nothing overflows.
 
-| Size | LaTeX command | Use for |
+**Baseline for free frame text:** `\normalsize` (the 10pt document base) is the working baseline for itemize bodies, prose blocks, and any text placed directly in the frame or a column. `\small` and below on such text are for genuinely dense exceptions, and each use requires a one-line justification comment (below).
+
+**Text inside fixed-dimension TikZ cards is governed by the card arithmetic, not by the baseline rule.** Card overlay text is sized together with the card via the height-computation procedure (see Scenario/Category Cards). When a card slide is under-filled, the lever is to **grow the card and the figure** (larger `minimum width`/`minimum height`/`text width`, wider spacing), re-run the arithmetic at the next size up, and let the text grow with the box. Never bump the font inside an unchanged card; the overlay has no overflow protection and the spill is silent.
+
+| Size | LaTeX command | Floor for (dense contexts only) |
 |------|--------------|---------|
-| ~9pt | `\small` | Default for TikZ node content, info cards, calculation chains, featured quotes |
-| ~8pt | `\footnotesize` | Chart axis labels, table body text, secondary labels |
+| ~10pt | `\normalsize` | Baseline for free frame text, itemize bodies, prose blocks; also legitimate in roomy TikZ cards when the arithmetic admits it |
+| ~9pt | `\small` | Floor for TikZ node content, info cards, calculation chains, featured quotes |
+| ~8pt | `\footnotesize` | Floor for chart axis labels, table body text, secondary labels |
 | ~7pt | `\scriptsize` | Chart tick labels, citation text (`\sourcecite`), table footnotes only |
 | ~5pt | `\tiny` | Never use for any visible element |
 
-**Principle:** If content does not fit at the target font size, reduce content rather than reducing font size. Split the slide, remove a bullet, or condense phrasing before dropping below `\small` for primary content.
+**Justification-comment rule.** Any use of `\footnotesize` or smaller on free body text or a meaning-bearing line (a so-what, takeaway, or finding) requires a one-line comment naming the density reason in terms of what was cut or what split was rejected, e.g. `% footnotesize: 9-row table alternative rejected, split tested and broke the comparison`. A bare `% dense` does not satisfy the rule. **Exempt (no comment needed):** chart tick and axis labels, table body and footnotes, code blocks, `\sourcecite`, the bottom-of-slide reference tiers, and text inside fixed-dimension TikZ cards (governed by the card arithmetic above; exempt from the comment only, never from the under-fill checks: an under-filled card deck is fixed by growing the cards). The audit greps for unjustified small body text.
+
+**Both directions are defects.** If content does not fit at the chosen size, reduce content rather than reducing font size (split the slide, remove a bullet, condense phrasing) before dropping toward a floor. If content sits small with room around it, grow the figure and the type rather than accepting the whitespace (see Frame Under-fill Management below). Clearing a minimum size is not the same as designing the slide.
 
 ---
 
@@ -237,7 +244,34 @@ The TikZ overlay positions the citation 18pt from the right edge and 10mm above 
 
 **Maximum content height rule:** On any slide that uses `\sourcecite{}`, body content (bullets, tables, TikZ diagrams) must not exceed approximately 80% of the slide height. When content is dense enough to risk collision, reduce the content (fewer bullets, tighter wording, split across slides) rather than shrinking font sizes or removing the citation. This is the most common source of visual defects in Beamer decks; the quality audit checks every slide individually for footer zone encroachment.
 
-**Important:** The citation font is `\scriptsize` (upright, not italic). Titles within the citation use `\textit{}` to produce visible italicization. If the entire citation were italic (`\itshape`), then `\textit{}` would have no visible effect and the title would not be distinguished from the rest of the citation.
+**Important:** The citation font is `\scriptsize` **upright, not italic**. Citation text contains no italic at all: titles are set upright just like author names and publication names. This matches the PPTX citation spec (11pt Calibri non-italic).
+
+### `\placement{label}{note}` (Deletable Overlay Note, review scaffold)
+
+A review-scaffold macro for marking up a deck without disturbing its layout. It floats a translucent note on top of the slide, pinned to the page top and drawn over the title, reserving zero layout space, so deleting the single `\placement{}{}` line on a slide leaves that slide pixel-identical to its production form. Use it for candidate-slide or insertion-marker decks (a note saying where each slide would go, what it adds, or a review comment). It is normally absent from production decks, so it is not in the Quick Reference preamble; add it only when building a marker deck. Because it is review scaffold removed before delivery and carries no slide message, it is exempt from design-for-content rules: a uniform `\placement` note across a marker deck is not a templating defect.
+
+```latex
+\newcommand{\placement}[2]{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \node[anchor=north,inner sep=2.5pt,rounded corners=2pt,
+      draw=AccentRed,line width=0.6pt,fill=LightGray,fill opacity=0.2,text opacity=1,
+      text width=\dimexpr\paperwidth-42pt\relax,align=left]
+      at ([yshift=-1mm]current page.north) {%
+        \hyphenpenalty=10000\exhyphenpenalty=10000%
+        {\scriptsize\textbf{\color{AccentRed}#1}}\\[1pt]%
+        {\scriptsize\color{CharText}\textit{#2}}%
+      };
+  \end{tikzpicture}%
+}
+```
+
+**The principle (why it deletes cleanly).** A delete-me note must float on top of the slide with zero reserved layout space. The moment any space is reserved for it (a top strip, a pushed-down title), deleting the note leaves the content shifted and forces a per-slide hand edit. You can keep at most two of {master content positions, zero reserved space, note never overlaps the title}; choosing master-positions plus zero-space means the note overlaps the title, so make that overlap legible (translucent fill) rather than fighting it. Mechanism notes:
+
+- Same `remember picture,overlay` mechanism as `\sourcecite`, anchored at `current page.north`. No `headline` template and no title mask, so it has zero layout footprint.
+- `fill opacity=0.2` tints only the box fill so the title reads through it; `text opacity=1` is load-bearing, keeping the red border and the note text fully solid (a bare `fill opacity` bleeds into the node-text glyphs and fades the note).
+- Plain frames (a `[plain]` cover) carry no `\placement`.
+
+**PPTX equivalent.** When such a deck is converted to PPTX (see the PPTX style guide), the marker is rebuilt as a separate, independently deletable text box at the top of each slide. Keep its solid `LightGray` (`F0EFEC`) fill and append `<a:alpha val="20000"/>` (20% opacity; OOXML alpha is thousandths of a percent) to the fill's `srgbClr`, so the fill reads translucent while `fill.fore_color.rgb` stays `F0EFEC`. A quality-check marker detector keys on that `F0EFEC` fill together with the AccentRed (`C0392B`) box border; both conditions identify the marker, so changing either the fill mechanism or the border color breaks detection. The box auto-sizes to its text, pinned at the top; the title sits at the master default beneath it, so deleting the one banner shape leaves a master-matching slide.
 
 ### Citation Format
 
@@ -309,7 +343,7 @@ A deck that begins as multi-source but ends up with 80 percent or more of slides
 - Source citations use `\sourcecite{}` only. No custom footer macros, no raw "Source: X (year)" text, no manual `\vfill` constructions outside of `\sourcecite{}`.
 - The `\sourcecite{}` macro renders text in upright `\scriptsize`. Citation text contains no italic: author, year, title, and publication are all set upright. Do not wrap titles in `\textit{}`.
 - Speaker notes use `\note{}` (invisible on slides). Never use visible `\insertnote` macros.
-- Insertion or placement comments use LaTeX `%` comments during drafting, never visible text.
+- Insertion or placement comments use LaTeX `%` comments during drafting, never visible text in a production deck. The one sanctioned visible exception is the `\placement{}{}` overlay note (see the `\placement` macro above), used only in candidate or review-marker decks and removed before delivery, so it leaves no trace in the shipped deck.
 - No visible footer content (the footline template reserves space only).
 
 ### Bottom-of-Slide Text Hierarchy
@@ -323,6 +357,94 @@ Three tiers of bottom-of-slide text, each with distinct formatting. Never mix th
 | **Table/data footnote** | `\scriptsize\color{CharText}` | "*FY 2024 net income includes a one-time tax benefit" |
 
 **Rule:** Never use `\scriptsize\color{MedGray}` outside of `\sourcecite{}`. That size/color combination is reserved for source attributions. Facilitator instructions, content framing notes, activity callouts, and discussion prompts use `\footnotesize\color{CharText}` so they are visually distinct from citations.
+
+---
+
+## Callout Vocabulary
+
+A callout reinforces a single strong point on a slide: a headline verdict, a decisive number, a sharp contrast. Callouts are selective, not decorative. Most slides carry their message through the title and the visual and use no callout at all.
+
+**Selective use (not every slide).** Add a callout only when a slide has a point worth reinforcing beyond its title and chart. Target roughly one callout per three to four content slides; never put one on every slide, and never on a slide whose title already lands the point. A callout that restates the title is noise, not emphasis.
+
+**Vary by message, do not template.** The style and color of a callout follow what the message *is*, so variety is a byproduct of the content, not a rotation. Do not factor callouts into one deck-wide macro applied uniformly across slides; that is a templating failure (design each slide for its own content). A deliberate callout is distinct from a floored takeaway-caption: a callout is a prominent emphasis element; a meaning-bearing line shrunk to clear a font floor is a buried message and a defect (see Font Sizing: Fill First, Then Clamp at the Floor).
+
+### The four callout styles
+
+| Style | Form | Use for |
+|---|---|---|
+| **S1 (solid box)** | white bold text on a dark fill (`\callout`) | the one headline verdict of a section; heaviest weight, used occasionally |
+| **S4 (bold statement)** | large bold colored text on white, no fill | a sharp takeaway or so-what; the default workhorse |
+| **S5 (hero stat)** | a giant colored number with a small label | one decisive figure |
+| **S6 (contrast pair)** | two bold half-statements side by side | before/after, myth/fact, problem/resolution |
+
+S2 (tinted panel) and S3 (left-rule quote) are not in the rotation.
+
+### Color by message valence
+
+Color tracks the meaning of the point, not decoration:
+
+| Valence | Color | Callout style |
+|---|---|---|
+| Neutral verdict / headline | SlateNavy or DeepTeal | S1 box (white text) or S4 text |
+| Risk, warning, downside | AccentRed | S1 box (white text) or S4 text |
+| Trade-off, cost, problem | BurntOrange | S1 box (white text) or S4 text |
+| Provocative, counterintuitive, human | DustyPlum | S1 box (white text) or S4 text |
+| Technical, secondary | CyanBlue | S1 box (white text) or S4 text |
+| Positive, growth, opportunity | AccentGreen | **S4 text only** (see contrast) |
+
+**Contrast rule (white text needs a dark fill).** An S1 box sets white text, so its fill must be a dark, white-text-safe color. Use only these for `\callout` fills:
+
+| Fill | Hex | White-text contrast |
+|---|---|---|
+| SlateNavy | `#1B2A4A` | 14.2 (safe) |
+| DeepTeal | `#0D7377` | 5.6 (safe) |
+| AccentRed | `#C0392B` | 5.4 (safe) |
+| DustyPlum | `#9B5978` | 5.1 (safe) |
+| CyanBlue | `#0077B6` | 4.9 (safe) |
+| BurntOrange | `#BF5700` | 4.6 (safe) |
+
+AccentGreen (`#27AE60`, 2.9), WarmAmber (`#E8913A`, 2.5), and SoftRed (`#DC5C5C`, 3.7) fail white-text contrast at projection scale and must never be used as an S1 fill. These colors are mid-luminance: neither white nor dark text reads well on them as a fill, so do not fill a callout with them at all. Render positive/green and amber emphasis as **S4** instead, where the color is the text on white and contrast is not an issue. For a risk point, prefer AccentRed (a safe S1 fill) over SoftRed.
+
+### The `\callout` macro (S1)
+
+Standalone reinforcement box on a white content slide: dark fill, white bold text, one text argument, color-parameterized (default SlateNavy). The body is a single string so the PPTX conversion can rebuild it as one editable filled text box.
+
+```latex
+\newcommand{\callout}[2][SlateNavy]{%
+  \begin{center}
+  \begin{tikzpicture}
+    \node[fill=#1,text=white,rounded corners=4pt,inner sep=10pt,
+      text width=\dimexpr\linewidth-24pt\relax,align=left,font=\large\bfseries] {#2};
+  \end{tikzpicture}
+  \end{center}}
+```
+
+Usage: `\callout{Adoption doubled. Value did not.}` or, for a risk point, `\callout[AccentRed]{Verification cost grows factorially.}`. The color argument must be one of the white-text-safe dark fills above. This replaces the retired `\emphbox` macro.
+
+**PPTX editability.** `\callout` is authored as a single filled node with a plain-string body precisely so the Beamer-to-PPTX conversion recreates it as an editable filled text box (a rounded rectangle with its own text run), not a flattened image. The PPTX style guide carries the matching instruction.
+
+### S4 / S5 / S6 (no fill, editable text)
+
+These carry the color as text on white, so they convert to editable PowerPoint text directly. They are plain LaTeX, not macros.
+
+```latex
+% S4 — oversized bold statement
+{\centering\Large\bfseries\color{DeepTeal} Adoption doubled. Value did not.\par}
+
+% S5 — hero stat
+{\centering\Huge\bfseries\color{BurntOrange} 3.7$\times$\;%
+ {\normalsize\mdseries\color{CharText} slower to ship}\par}
+
+% S6 — contrast pair (two columns)
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}\centering
+  {\large\bfseries\color{AccentRed} Myth}\\[4pt]{\color{CharText} AI replaces the worker.}
+\end{column}
+\begin{column}{0.48\textwidth}\centering
+  {\large\bfseries\color{AccentGreen} Reality}\\[4pt]{\color{CharText} AI shifts the task mix.}
+\end{column}
+\end{columns}
+```
 
 ---
 
@@ -443,6 +565,8 @@ Centered tables with `booktabs` rules and alternating `PaleBlue` row shading:
 ]
 ```
 
+**Legend placement.** The default above (`at={(1.03,0.5)}`, right of the chart) keeps the legend out of the plot entirely and is the preferred choice. For narrow column charts where it causes an overfull hbox, move it below the axis instead (see the beamer skill's audit-checklist.md (Chart Legends) for the width-based fallback). Only when the legend must sit inside the plot area, choose the corner the data leaves empty, read from the actual series values rather than a fixed position: a rising series leaves the bottom-right open, a falling series the bottom-left, a plateau either bottom corner. A legend inside the plot that a data line crosses is a defect (audit-checklist.md, Chart Legends). Keep placement consistent across a deck where the data allows it.
+
 **Axis line rules:**
 - **Always use `axis lines=left`** to draw only the left y-axis and bottom x-axis. This produces clean, L-shaped axes without a box border. Never use the default box axes (all four sides), which create an enclosing rectangle that looks like unwanted grid lines.
 - **Always use `axis on top`** to draw axis lines on top of plot content. This prevents bar edges from covering axis lines.
@@ -490,8 +614,9 @@ Use `fill=SlateNavy!80,draw=SlateNavy` for single-series bars. For dual bars, us
 | 5+ | -0.7 | (N-1)+0.7 | Standard padding |
 | Grouped bars (2+ series) | -0.8 to -1.0 | (N-1)+0.8 to (N-1)+1.0 | Extra padding for wider bar groups |
 
-**`ymin` and zero baselines:**
-- **All-positive data:** Set `ymin=0` so the x-axis sits at zero. Do not add negative padding for data that is entirely positive.
+**`ymin` and zero baselines (applies to all chart types, not just bar charts):**
+- **All-positive data (default rule):** Always set `ymin=0`. This applies to bar charts, line charts, scatter plots, and area charts, any chart with an all-positive y-axis. The zero baseline is the default and it has no exception for proportions, percentages, or cumulative values. Non-zero baseline is permitted only when the data genuinely fills a tight band such that zero-basing produces 80%+ whitespace, AND the slide carries a visible "scale starts at N" note near the axis or in a caption. Render the note at `\scriptsize` in `CharText`, placed in the caption or near the axis origin, not inside the plot area. The scale note requirement exists because a truncated y-axis without disclosure misleads the viewer.
+- **Percentage axes:** always `ymin=0` and typically `ymax=100` (or `ymax=1` for fractional), regardless of data range. No exceptions for percentage data even with a scale note.
 - **Mixed positive/negative data:** Keep `ymin` at or below the lowest value. Add a zero baseline line:
   ```latex
   extra y ticks={0},
@@ -593,17 +718,21 @@ Use grids on time-series and line charts. Omit on bar charts, scatter plots, and
 When shading regions under curves or between areas on a chart:
 
 ```latex
-\addplot[fill=DeepTeal,fill opacity=0.15,draw=none,domain=...] {...} \closedcycle;
-\addplot[fill=CyanBlue,fill opacity=0.12,draw=none,domain=...] {...} \closedcycle;
+\addplot[fill=DeepTeal,fill opacity=0.15,draw=none,forget plot,domain=...] {...} \closedcycle;
+\addplot[fill=CyanBlue,fill opacity=0.12,draw=none,forget plot,domain=...] {...} \closedcycle;
 ```
 
 Use opacity 0.12-0.15 for region fills on white backgrounds to ensure visibility.
+
+**Add `forget plot` to every region or area fill that is not itself a labeled series.** `\addlegendentry` commands map to `\addplot` commands in source order, so a shading-only `\addplot` silently takes the first legend slot and shifts every subsequent label by one: the shaded region vanishes from the legend and each real series inherits the wrong name. The one exception is a region you genuinely want labeled (a confidence band, a "forecast range"): give it its own `\addlegendentry` and omit `forget plot`. Audit-time mirror: the beamer skill's audit-checklist.md (Chart Legends).
 
 ### Annotations on Charts
 
 - Data point labels: `\node[text=DeepTeal,font=\tiny\bfseries,above left]`
 - Reference lines: `\draw[dashed,AccentRed,thick]`
 - Callout annotations: `\node[text=CyanBlue,font=\scriptsize\bfseries]` with `\draw[-{Stealth},CyanBlue,thick]` arrow
+
+**Annotating a gap or difference that is cramped at a chart edge.** When the feature to label is a narrow gap, wedge, or divergence that only opens at the edge of the plot (for example, the difference between an actual line and a forecast line in the final years), do not stack the label and arrow in the corner where they collide with the lines. Shade the region itself with a low-opacity fill (see Chart Region Fills) so the gap becomes the visual, then place the text label in open plot space with a thin leader arrow to the region. This applies only when open space exists in the plot; if the plot is full, move the annotation outside the axis or state the magnitude in a bullet instead. A leader must not cross a data series or gridlines on its way to the target.
 
 **`nodes near coords` defaults:** Always include `/pgf/number format/fixed,/pgf/number format/precision=2` in the `nodes near coords style` when using `nodes near coords`. Without this, pgfplots renders small decimal values (e.g., 0.04) in scientific notation (`4 . 10^{-2}`), which is unreadable on slides.
 
@@ -613,6 +742,16 @@ nodes near coords style={font=\tiny\bfseries,/pgf/number format/fixed,/pgf/numbe
 ```
 
 **Value label collisions near axes:** When using `nodes near coords` on bar charts, short bars near the axis origin produce value labels that sit at the same height as y-axis tick labels, causing collisions. For the first and last bar groups in particular, verify that value labels do not overlap axis tick labels. If collisions occur, add `xshift` or `yshift` to the `nodes near coords` style, or use conditional placement to offset labels on short bars away from the axis.
+
+**Math tokens inside `\addlegendentry`: use `\ensuremath{...}`, never `$...$`.** When a legend label contains a math symbol (`\to`, `\rightarrow`, `\Rightarrow`, Greek letters, subscripts, etc.), wrap it with `\ensuremath{token}` rather than `$token$`. Math-mode dollar delimiters inside `\addlegendentry` can corrupt pgfplots state when the legend layout calculation re-tokenizes the captured label, producing a fatal `! Missing control sequence inserted / \inaccessible` error attributed to the wrong frame's `\end{frame}` (the off-by-one diagnostic trap is the worst part of this bug). The error fires only when (a) the legend has 2+ entries and (b) another frame follows the offending one. `\ensuremath{}` avoids the issue because it does not change catcodes.
+
+```latex
+% BROKEN:
+\addlegendentry{Ag $\to$ Ag (stayed in agriculture)}
+
+% CORRECT:
+\addlegendentry{Ag \ensuremath{\to} Ag (stayed in agriculture)}
+```
 
 ### Chart Annotation Recipes
 
@@ -660,6 +799,10 @@ The label is part of the axis tick system, so it is guaranteed to align with the
 ---
 
 ## TikZ Diagram Styling
+
+### Freeform Paths and Node Clearance
+
+When a schematic diagram combines a hand-drawn curve or line (a `\draw ... .. controls ...` Bezier or a `\draw ... -- ...` polyline) with `\node` boxes in the same `tikzpicture`, budget vertical clearance between the path and the boxes before placing them. The empty-box and sibling-uniformity rules do not protect freeform paths: a curve has no `minimum height` for them to act on, so a curve whose peak reaches a box silently touches or overlaps it with no warning. Compute the path's extreme coordinate toward the boxes (for boxes above the curve, the largest control-point y is a safe upper bound, since a cubic Bezier stays within the bounding box of its control points) and leave at least 0.3 cm between that extreme and the nearest box edge. Budget this clearance into the diagram height up front: raising the boxes or lowering the curve increases the diagram's total height and can push a tight slide into an overfull vbox, so size the surrounding spacing accordingly rather than discovering the overflow after the fact. Audit-time mirror: the beamer skill's audit-checklist.md (Graphics: TikZ Element Clearance).
 
 ### Text Anchoring in Boxes
 
@@ -810,6 +953,28 @@ When multiple TikZ nodes appear in a row, grid, or group (e.g., phase boxes, flo
 
 **Height:** `minimum height` is also a floor. Content with more lines will expand the box beyond the minimum. **Primary fix: use the empty-box-plus-overlay pattern** (see Scenario/Category Cards above). Draw empty box nodes at fixed dimensions (no text content, so the minimum IS the rendered size), then overlay text with separate `\node[anchor=north west]` elements. This guarantees uniform height regardless of content length. Alternative: use a booktabs table instead (tables enforce uniform row heights natively via `\arraystretch`). When the content is structured data (problem/fix pairs, feature lists, ranked items), prefer a table.
 
+**Sub-header alignment in card siblings (mandatory for multi-element overlays).** When sibling cards use the empty-box-plus-overlay pattern AND each card's overlay contains a title plus one or more subheads (date, subtitle, category tag), each labeled region must be a *separate overlay node* anchored at a fixed y-offset from the card's north anchor. Do NOT pack title + subhead + bullets into one overlay node whose internal layout depends on title height. Reason: if any sibling's title wraps to a different line count, the packed subhead and everything below ride along with the title, so the subhead lands at a different y-position across siblings (the date in one card sits where the first bullet sits in another), producing a visibly misaligned subhead row across the card family. The defect appears even when no content overflows the card.
+
+Reserve the title's y-range to fit the worst-case sibling, then anchor the subhead and bullets at fixed offsets below it. Title wraps freely inside its reserved range; subhead and bullets stay aligned across siblings.
+
+```latex
+% Title overlay — reserved y-range -6pt to about -26pt (fits a 2-line title at \small)
+\node[anchor=north west,text width=Wcm,font=\small,align=left]
+  at ([shift={(6pt,-6pt)}]b1.north west) {\textbf{\color{X}Card Title}};
+% Subhead overlay — fixed y, identical across siblings regardless of title length
+\node[anchor=north west,text width=Wcm,font=\footnotesize,align=left]
+  at ([shift={(6pt,-28pt)}]b1.north west) {Date or subtitle};
+% Bullet overlay — fixed y, identical across siblings
+\node[anchor=north west]
+  at ([shift={(6pt,-42pt)}]b1.north west)
+  {\begin{minipage}{Wcm}\setlength{\leftmargini}{1em}
+   \begin{itemize}\setlength{\itemsep}{2pt}\footnotesize
+     \item ...
+   \end{itemize}\end{minipage}};
+```
+
+The fixed offsets (`-6pt`, `-28pt`, `-42pt` above) are illustrative; pick values based on the worst-case sibling's title height plus a small gap. If one sibling's title is shorter, the title overlay leaves visible blank space inside its reserved range, which is acceptable. What matters is that the subhead row aligns across siblings.
+
 **Positioning: prefer relative over absolute.** When placing a sequence of nodes in a vertical or horizontal flow, use relative positioning (`below=10pt of`, `right=10pt of`) instead of absolute coordinates. Relative positioning produces uniform gaps regardless of content height. Absolute coordinates (`y=0, y=-1.5, y=-3.0`) produce inconsistent visual gaps when nodes have different content heights.
 
 **When to use tables instead of TikZ boxes:** If the content is a list of items with parallel structure (e.g., five failure modes with fixes, three priorities with descriptions), a booktabs table with colored cells, `\rowcolor`, and `\arraystretch` is both more visually consistent and more maintainable than TikZ boxes. TikZ should be reserved for content with genuine spatial relationships (flows, cycles, hierarchies).
@@ -899,6 +1064,22 @@ When content overflows a frame, reduce the content rather than scaling the frame
 
 ---
 
+## Frame Under-fill Management
+
+The symmetric defect to overflow. A compiled frame with empty horizontal bands above and below its content, a figure floating in whitespace, or body text at small sizes with visible room to grow is under-filled. Under-fill ships silently: nothing overflows, every size clears its floor, and the slide still reads timid and small when projected. Treat the whitespace as a defect signal to investigate, not as breathing room to accept. This applies to every deck type, including dense working decks: a working deck is denser by design, not smaller.
+
+**Fix order (grow the visual first, the font follows):**
+
+1. **Grow the figure's internal dimensions:** larger pgfplots `width`/`height` toward the clearance limits, larger node sizes and spacing in TikZ diagrams, larger card `minimum width`/`minimum height`/`text width`. Never use `scale=` or `\resizebox` (see TikZ Generation Safety); grow the real dimensions so text grows in proportion.
+2. **Re-run the height arithmetic at the next size up.** With a larger card or column, check whether the overlay or body text fits at `\small` → `\normalsize` per the character-width and line-height tables, and raise the font only within what the enlarged container admits.
+3. **Raise free text toward the `\normalsize` baseline** where it was set small without a density reason.
+
+**What under-fill is NOT fixed by:** adding filler content, padding bullets, or stamping a uniform element (a bottom caption, a key, a band) across slides to absorb the space; a uniform added element is a templating defect (design each slide for its own content), not a cure. Respect the existing clearances while growing: the `\sourcecite` zone, the footer zone, and the overfull-box rules still bind, so growth stops at the clearance limits, not at the page edge.
+
+**Conservative sizing guidance is a ceiling, not a target.** Rules elsewhere in this guide that say to size charts conservatively (column buffer percentages, maximum chart widths, "keep content in the upper 75%") exist for collision avoidance. They mean "do not exceed"; they do not mean "stay small." On an under-filled slide, grow the chart toward those limits.
+
+---
+
 ## Cognitive Density Guidelines
 
 - **Slide titles are the key message.** Each title should concisely convey the slide's main point or finding (e.g., "Remote Workers Report 23% Higher Satisfaction" not "Survey Results"). Keep titles to one line when possible; two lines maximum.
@@ -906,7 +1087,7 @@ When content overflows a frame, reduce the content rather than scaling the frame
 - **Tables and charts:** one major data element per slide. The title should state the interpretation or key finding.
 - **Equations:** display mode (`\[ ... \]`) for important equations. Inline for minor expressions.
 - **Dark slides** (SlateNavy background) are reserved for transitions: title and closing only. Key Takeaways uses a white background.
-- **No callout boxes in text.** Do not use `\emphbox`, `\highlight{}`, or similar highlighted box macros inside bullet lists, enumerate environments, or running prose. `\highlight{}` is reserved for standalone labels in TikZ diagrams only. For inline emphasis in bullets, use `\textbf{\color{DeepTeal}...}`. Convey the key point through the slide title instead of inline callouts.
+- **No boxed text inside bullets or running prose.** Do not use `\highlight{}` or any highlighted-box macro inside bullet lists, enumerate environments, or running prose; `\highlight{}` is reserved for standalone labels in TikZ diagrams, and inline emphasis in bullets uses `\textbf{\color{DeepTeal}...}`. Standalone reinforcement callouts are a separate, permitted element governed by the Callout Vocabulary section: used selectively (about one per three to four slides), varied by message, never on every slide, and never as a restatement of the title. The former blanket ban on callout boxes is replaced by that vocabulary; the `\emphbox` macro name is retired in favor of `\callout`.
 - **No text shadows or effects.** Never apply `shadow`, `drop shadow`, `blur shadow`, or any shadow/glow options to text nodes, frames, or TikZ elements. All text must be flat and clean, with no shadow=true and no text effects.
 - **No inline author references in bullet text.** Never reference authors by name inside bullet points, prose, or slide body text (e.g., "Hendrycks et al. find that..."). Instead, present the finding as a factual statement and attribute the source using `\sourcecite{}` at the bottom of the slide. Inline author references break the expository flow and are unnecessary when the citation is visible.
 - **No MedGray on visible content.** MedGray (`#B0AFA8`) is reserved for `\sourcecite{}` text and chart reference/trend lines only. Never use MedGray for body text, date labels, timeline year labels, scale annotations, TikZ node text, fill colors, or any element that needs to be readable when projected in a classroom. Use CharText (`#3A3A3A`) for all readable text. Use palette accent colors (DeepTeal, CyanBlue, DustyPlum, AccentGreen, WarmAmber) at `!12` tint for light fills instead of MedGray.
@@ -1061,6 +1242,13 @@ Copy this entire block to start a new presentation in this style:
 }
 
 \newcommand{\highlight}[1]{\colorbox{SlateNavy}{\textcolor{white}{\small\textbf{#1}}}}
+\newcommand{\callout}[2][SlateNavy]{%
+  \begin{center}
+  \begin{tikzpicture}
+    \node[fill=#1,text=white,rounded corners=4pt,inner sep=10pt,
+      text width=\dimexpr\linewidth-24pt\relax,align=left,font=\large\bfseries] {#2};
+  \end{tikzpicture}
+  \end{center}}
 \newcommand{\sourcecite}[1]{%
   \begin{tikzpicture}[remember picture,overlay]
     \node[anchor=south east,text=MedGray,font=\scriptsize,inner sep=0pt,

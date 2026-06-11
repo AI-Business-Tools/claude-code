@@ -97,11 +97,12 @@ The [style-guide.md](style-guide.md) file is a technical reference document with
 - **Color palette:** 13 named colors with hex values and semantic roles
 - **Complete preamble:** Ready to copy verbatim into a new `.tex` file
 - **Theme configuration:** `\usetheme{default}` with full color overrides
-- **Custom macros:** `\highlight{}` for TikZ labels, `\sourcecite{}` for citations
-- **pgfplots rules:** Axis configuration, bar chart containment, stacked bar ordering, annotation recipes
-- **TikZ conventions:** Empty-box-plus-overlay pattern, overflow height computation, sibling-node uniformity
+- **Custom macros:** `\highlight{}` for TikZ labels, `\sourcecite{}` for citations, `\callout{}` for reinforcement boxes, `\placement{}` for deletable review notes
+- **Callout vocabulary:** Four callout styles with color-by-message-valence and white-text contrast rules
+- **pgfplots rules:** Axis configuration, legend placement, bar chart containment, stacked bar ordering, annotation recipes
+- **TikZ conventions:** Empty-box-plus-overlay pattern, overflow height computation, sibling-node uniformity, freeform path clearance
 - **Slide type patterns:** Dark accent slides, key takeaways, two-column layouts, data tables
-- **Cognitive density rules:** Title conventions, when to use tables vs. TikZ, what to avoid
+- **Cognitive density rules:** Title conventions, fill-first font sizing, frame under-fill management, when to use tables vs. TikZ, what to avoid
 
 ## Customization
 

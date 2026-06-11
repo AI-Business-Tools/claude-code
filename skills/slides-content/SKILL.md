@@ -1,9 +1,9 @@
 ---
 name: slides-content
-description: Multi-step workflow to create presentation slides from content (academic papers, articles, notes). Reads the source (splitting PDFs, extracting text from Word/RTF, or reading markdown/text/LaTeX directly), summarizes the content, generates Beamer slides with figures and tables, then converts to PPTX using the style guide. Reuses any pre-existing text extract or summary in the output directory to avoid redundant work. Optional `audience=` parameter forwards to the beamer skill to select an audience-specific structural template.
+description: Multi-step workflow to create presentation slides from content (academic papers, articles, notes). Reads the source (splitting PDFs, extracting text from Word/RTF, or reading markdown/text/LaTeX directly), summarizes the content, generates Beamer slides with figures and tables, then converts to PPTX using the style guide. Reuses any pre-existing text extract or summary in the output directory to avoid redundant work. Default deck opens Title, then Methodology, then Summary (a preview of conclusions) and includes Limitations and Conclusions slides near the end, each when appropriate. Optional `structure=` parameter (mba [default], teaching, faculty, professional, consulting, working) and `register=` parameter (business [default], technical) forward to the beamer skill to select the deck skeleton and language level; `audience=` is accepted as a deprecated alias for `structure=`.
 triggers: slide this, slides from this, create slides from this, make a deck from this, turn this into slides, slides from this paper, presentation from this article, build a deck
 allowed-tools: Bash(python*), Bash(pip*), Bash(curl*), Bash(wget*), Bash(mkdir*), Bash(ls*), Bash(pdflatex*), Bash(xelatex*), Bash(lualatex*), Bash(latexmk*), Bash(bibtex*), Bash(biber*), Bash(cd*), Bash(cp*), Bash(mv*), Bash(rm*), Bash(which*), Bash(type*), Bash(kpsewhich*), Bash(tlmgr*), Bash(texhash*), Bash(mactex*), Bash(mktexlsr*), Bash(fmtutil*), Bash(updmap*), Bash(brew*), Bash(find*), Bash(system_profiler*), Bash(fc-list*), Bash(sudo*), Bash(eval*), Bash(export*), Bash(cat*), Bash(grep*), Bash(head*), Bash(tail*), Bash(wc*), Bash(textutil*), Read, Write, Edit, WebSearch, WebFetch, Glob, Grep, Task
-argument-hint: [optional: file-path, url, or leave blank to pick from menu] [audience=teaching|faculty|professional|consulting|working]
+argument-hint: [optional: file-path, url, or leave blank to pick from menu] [structure=mba|teaching|faculty|professional|consulting|working] [register=business|technical]
 ---
 
 # Slides from Content: Four-Step Workflow
@@ -181,8 +181,8 @@ If `<content_name>_summary.md` does not exist, continue with the MANDATORY FIRST
 
 **MANDATORY FIRST ACTIONS (before writing any summary content):**
 1. Auto-detect content type based on the source material or `notes.md`:
-   - **Academic** (has methods section, literature review, formal citations, peer review, formal methodology) → read the academic summary skill in full
-   - **General** (news, blog, opinion, report, interview, informal writing) → read the general summary skill in full
+   - **Academic** (has methods section, literature review, formal citations, peer review, formal methodology) → read `../summary-academic/SKILL.md` in full
+   - **General** (news, blog, opinion, report, interview, informal writing) → read `../summary-general/SKILL.md` in full
    - **Ambiguous** → default to academic
 2. Do not write any summary content before completing the read. The skill file defines the exact output format, section headings, and style requirements that must be followed precisely.
 
@@ -190,13 +190,13 @@ If Step 1 produced `notes.md`, use those notes as the basis for the summary. If 
 
 ### If Academic Paper
 
-Apply the **academic summary skill**. Academic content includes: peer-reviewed journal articles, conference proceedings, working papers, preprints, dissertations, and technical reports with formal methodology sections.
+Apply the **academic summary skill** (`../summary-academic/SKILL.md`). Academic content includes: peer-reviewed journal articles, conference proceedings, working papers, preprints, dissertations, and technical reports with formal methodology sections.
 
 Produce the full structured summary (citation, thesis, key points, conclusions, population, implications, concepts, issues, summary paragraph) following all style requirements from that skill.
 
 ### If General Content
 
-Apply the **general summary skill**. General content includes: news articles, blog posts, opinion pieces, reports, interviews, podcasts, videos, and informal writing.
+Apply the **general summary skill** (`../summary-general/SKILL.md`). General content includes: news articles, blog posts, opinion pieces, reports, interviews, podcasts, videos, and informal writing.
 
 Produce the full structured summary (citation, thesis, themes, issues if applicable, summary paragraph) following all style requirements from that skill.
 
@@ -220,7 +220,7 @@ Do not proceed without completing both reads. The style guide contains the exact
 
 Apply the **beamer skill** (`../beamer/SKILL.md`) using the deep-reading notes (`notes.md` from the build subdirectory) and the summary (`<content_name>_summary.md` from the output subdirectory) as input. All compilation work happens in the build subdirectory.
 
-**Audience parameter forwarding:** if this skill was invoked with an `audience=` parameter (for example, `audience=faculty`), pass that parameter through to the beamer skill so its Step 0.5 Audience Triage matches the specified pattern. If no audience parameter was passed, the beamer skill applies its default (teaching lecture).
+**Structure and register forwarding:** if this skill was invoked with a `structure=` parameter (for example, `structure=consulting`) and/or a `register=` parameter (`register=technical`), pass them through to the beamer skill so its Step 0.5 Structure and Register Triage runs with them. A legacy `audience=` parameter is forwarded unchanged; the beamer skill treats it as the deprecated alias for `structure=`. If neither is passed, do not invent one; the beamer skill's default structure (`mba`) with the default `business` register applies (Title, then Methodology, then Summary preview, then findings, then Limitations, Conclusions, Key Takeaways, and Closing; Methodology, Summary, Limitations, and Conclusions each appear when appropriate).
 
 The beamer skill handles the full Beamer generation cycle:
 - Original aesthetic design targeted at a professional or graduate student audience
@@ -236,7 +236,7 @@ Output: `slides.tex` and all LaTeX artifacts in the build subdirectory. The beam
 
 **Pause here and ask the user:** "Beamer slides for *[title of the content]* compiled and verified. Would you like me to convert to PowerPoint (.pptx)?"
 
-Use the actual title of the paper, article, or content being processed. Wait for the user to confirm before proceeding to Step 4. If the user declines, stop here.
+Use the actual title of the paper, article, or content being processed. Wait for the user to confirm before proceeding to Step 4. If the user declines, stop here. This is the deck's single PPTX offer: do not re-raise PowerPoint in later turns or session logs. An unconverted deck is complete; if the user wants PPTX later, they ask for it.
 
 ---
 
@@ -278,7 +278,7 @@ Report to the user:
 | Step | Action | Skill Used | Output Location |
 |------|--------|------------|-----------------|
 | **1. Read Source** | Split PDF and deep-read in batches; or read non-PDF files directly | `../split-pdf/SKILL.md` (PDF only) | `_build/notes.md`, `_build/split_*/` (PDF) |
-| **2. Summarize** | Academic or general summary | academic or general summary skill | `<content_name>_summary.md` (output dir) |
+| **2. Summarize** | Academic or general summary | `../summary-academic/SKILL.md` or `../summary-general/SKILL.md` | `<content_name>_summary.md` (output dir) |
 | **3. Beamer Slides** | Design, compile, evaluate, verify graphics | `../beamer/SKILL.md` | `_build/slides.tex` → `<content_name>_slides.pdf` (auto-placed by beamer skill; renamed if needed) |
 | **4. Convert to PPTX** | Apply PowerPoint style guide | `../../style-guides/pptx/style-guide.md` | `<content_name>.pptx` (output dir) |
 

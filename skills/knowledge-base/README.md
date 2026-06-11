@@ -22,7 +22,7 @@ Documents are organized into topic folders you define. The skill does not impose
 ## Operating Modes
 
 **Process Inbox (`/kb`)**
-Scan the inbox folder for new files. Each item is processed in its own subagent for context isolation. The parent reads the appropriate summary skill format before launching agents, then inlines those instructions into each agent prompt. After processing, presents a batch summary table with topic suggestions and waits for confirmation before moving files.
+Scan the inbox folder for new files. Each item is processed in its own subagent for context isolation. The parent reads the appropriate summary skill format before launching agents, then inlines those instructions into each agent prompt. After processing, each item is filed into its best-fit topic folder immediately and a report shows where everything landed; you redirect after the fact ("move X to Y") rather than approving each move in advance. Items with no clear fit go to your overflow folder, flagged; likely duplicates are held in the inbox for a decision.
 
 Supports three processing levels:
 - Full: all pages, produces `_text.md` and `_summary.md`

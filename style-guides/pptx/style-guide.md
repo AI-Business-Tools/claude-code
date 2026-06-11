@@ -8,13 +8,52 @@ The accent palette in this style guide matches the Beamer style guide exactly. *
 
 ## Critical Rules (Most-Violated, Read First)
 
-These five rules are violated in nearly every PPTX generation. They override any conflicting code example or default assumption elsewhere in this file.
+These rules are violated in nearly every PPTX generation. They override any conflicting code example or default assumption elsewhere in this file.
 
-1. **Body text targets 22-24pt, not 18pt.** Default to `Pt(22)` for all body text, bullets, and labels. Drop to `Pt(20)` only when content density requires it. 18pt is a hard floor for exceptional cases only. If text does not fit at 20pt, reduce content (split slide, remove bullets, condense phrasing) before reducing font size.
+1. **Font size is role-based and computed, never a floor written as a literal.** Text must match the role-to-size hierarchy below. A single flat floor is wrong; citations legitimately use 11pt and diagram micro-labels use 14-16pt, while body text must stay at 22pt+. For every text element, compute the largest size in the role's range that fits the box (`fit_font_size()` in the canonical scaffold), then clamp at the role floor; a floor is what the computed size may not go below, never the size you assign. A generator that writes `size=22` as the default for every body run is the uniform-at-floor defect the quality check blocks. See "Role-Based Font Hierarchy" below.
 2. **All readable text uses Charcoal (#4D4D4D).** Never use #B0AFA8 (MedGray) or #6C7A89 (Medium Gray) on body text, labels, headings, date labels, or any element that must be readable when projected. #B0AFA8 is exclusively for citation text boxes (`add_citation()`). #6C7A89 is for connector lines and neutral shape outlines only.
-3. **No inline source references.** Present findings as factual statements. Author attribution goes exclusively in `add_citation()` text boxes at the bottom of the slide. Never write "Smith et al. (2024) found that..." in body text.
-4. **The quality check is mandatory and blockers must be fixed.** Run `run_quality_check(prs)` before every `prs.save()`. Fix all errors (not just warnings) before saving. Fonts below 20pt are errors, not warnings.
+3. **No inline source references.** Present findings as factual statements. Author attribution goes exclusively in `add_citation()` text boxes at the canonical citation band at the bottom of the slide. Never write "Smith et al. (2024) found that..." in body text.
+4. **The quality check is mandatory and blockers must be fixed.** Run `run_quality_check(prs)` before every `prs.save()`. Fix all errors (not just warnings) before saving.
 5. **Native objects, not image embeds.** Colored boxes, flowcharts, box-and-arrow diagrams, tables, and standard charts must be recreated as native PowerPoint objects. Image embed is a last resort for irreducible visual complexity (Bezier curves, mathematical plots). If you are about to embed a full-slide image, stop and reclassify.
+6. **Lock shape dimensions with `auto_size = MSO_AUTO_SIZE.NONE` on every text-containing text frame.** Every shape or text box that holds text (rounded rectangles with labels, cards, citations, text boxes, callouts) must explicitly set `text_frame.auto_size = MSO_AUTO_SIZE.NONE` immediately after the shape is created. python-pptx defaults vary by shape type, and Keynote's PDF export silently resizes auto-sized shapes (cards misalign, text frames grow beyond their coded height). Coded dimensions are only honored when `auto_size` is locked. Bake this into every wrapper helper (`add_rounded_card()`, `add_citation()`, direct `add_textbox()` calls). **Exempt:** purely decorative shapes that contain no text (e.g., a thin accent sliver or a background rectangle) do not need `auto_size` locked; there is nothing to resize. Also exempt: chart title/axis frames managed by python-pptx's chart API, and the Title placeholder provided by the template.
+7. **Prevent PowerPoint "repaired and removed content" warnings.** python-pptx generates two structures that PowerPoint's strict validator flags as malformed; both must be neutralized in every PPTX:
+   - **Auto-added `<p:style>` block on autoshapes.** When `add_shape()` creates a rounded rectangle (or any preset autoshape), python-pptx attaches a `<p:style>` element that references theme scheme colors (accent1, lt1, etc.). When the generator also sets explicit RGB fill and line via `spPr` (which `add_rounded_card()` does), PowerPoint sees the conflict and silently strips shapes during repair. **Fix:** remove the `<p:style>` element from the shape after `add_shape()` returns. `add_rounded_card()` does this automatically; if you create a custom autoshape helper with explicit fills, do the same.
+   - **`<a:buChar>` without a paired `<a:buFont>`.** PowerPoint requires a typeface to render the bullet character. `set_bullet()` adds `<a:buFont typeface="Arial"/>` immediately before `<a:buChar>` to satisfy the schema. Do not write a custom bullet helper that emits only `<a:buChar>`.
+   These regressions surface as "PowerPoint couldn't read some content - Repaired and removed it" on file open, which silently drops shapes the user expects to see. Both checks are enforced by `run_quality_check()` (see "Pre-Save Structural Quality Check"). Do not bypass either guard.
+
+### Role-Based Font Hierarchy
+
+Every text element on a slide has a role. Match the role to its target font size. Floors are blocking; above-target is acceptable if the content warrants emphasis.
+
+| Role | Target | Floor (blocking) | Typical position/shape |
+|---|---|---|---|
+| Title | 36pt | 32pt | Title placeholder, T≈0.33", H≈1.49" |
+| Category header (section label in a box) | 32pt | 28pt | Top of a rounded rectangle or column |
+| Body primary (main text audience reads) | 24-28pt | 22pt | Bullet lists, paragraph body |
+| Body secondary (supporting text, sub-bullets) | 22pt | 20pt | Continuation text, inset bullets |
+| In-shape label (word inside a diagram node, row/column label) | 18-22pt | 16pt | Rounded rectangles or label boxes <3.5"W and <1.2"H, connector nodes |
+| Diagram micro-label (connector annotation) | 14-16pt | 12pt | Small text boxes <2.5"W and <0.6"H |
+| Chart axis, legend, data labels | 14pt | 14pt | Inside charts (handled by `fix_chart_fonts()`) |
+| Chart caption or annotation text | 12pt | 11pt | Short explanatory text below/beside a chart |
+| Citation | 11pt (fixed) | 11pt | Canonical citation band, T=8.00" |
+| Footer, slide number | Template default | Template default | Footer placeholder |
+
+Shape-size signals the role. A text box narrower than 2.5" and shorter than 0.6" is an annotation, not body text: allow down to 14pt. A text box occupying most of the slide width (>10") with standing multi-line content is body: floor at 22pt. Citations are identified by position (T between 7.5 and 8.25, H ≤ 0.80).
+
+**Compute the size, then clamp (mandatory).** For each text element: start at the role's target ceiling (28pt for body primary), use `estimate_text_height()` to step down until the content fits the box, and apply `max(computed, floor)`. The canonical scaffold's `fit_font_size()` implements this; compute the size at the call site and pass the result as `size=`. Two guards so the computation cannot be gamed: the box itself must respect the content-area and grid-layout limits (a size only "fits" in a legitimately sized box, not an inflated one), and the overflow check still runs after sizing. The floor is reached only when content is already minimal; it is never the starting value.
+
+When body content does not fit at its role's target, **reduce content**: split the slide, remove a bullet, condense phrasing. Never drop body text below 22pt. Symmetrically, when content sits far below its box capacity at the floor, the size was never computed: recompute upward toward the role ceiling rather than shipping small text in an under-filled box.
+
+### Accent Colors on Card Category Headers
+
+Card category headers (the label at the top of a rounded-rectangle card or column) default to **Charcoal** (`#4D4D4D`), matching body text. A palette accent color is appropriate when the card is **statistic-led**: its purpose is to surface a single headline number or short emphatic phrase, not to deliver prose.
+
+| Card type | Header color | Example |
+|---|---|---|
+| Statistic-led (card leads with a large number or short emphasis) | Palette accent (DeepTeal, BurntOrange, SlateNavy, WarmAmber) | A three-card row showing "82%", "4.3x", "$1.2B" with short captions beneath |
+| Content-led (card contains a paragraph, bullet list, or descriptive text) | Charcoal | A three-card row showing "Context", "Finding", "Implication" with explanatory text beneath |
+
+This is positive guidance, not a blocking rule. Rule #2 (no grays on body text) remains the enforced floor; accent colors on statistic-led card headers are permitted above that floor.
 
 ---
 
@@ -24,18 +63,18 @@ These five rules are violated in nearly every PPTX generation. They override any
 |---------|---------------|
 | Slide titles | 36pt Calibri Bold, #4D4D4D, in Title placeholder |
 | Section headers within slides | 24-28pt Calibri Bold |
-| Body text | **20-24pt** Calibri Regular, #4D4D4D |
-| Minimum text size | **18pt** hard floor for body text; 14pt for chart axis labels and table content only |
+| Body text | **24-28pt target, 22pt floor** Calibri Regular, #4D4D4D (per the Role-Based Font Hierarchy, the canonical spec) |
+| Minimum text size | Role floors per the Role-Based Font Hierarchy (body 22pt, body secondary 20pt, in-shape label 16pt; 14pt for chart axis labels and table content only) |
 | Subtitles | NEVER use subtitles; title only, content below |
 
-**Font size principle: use the largest size that fits attractively.** Target 22-24pt for bullet lists and short labels; drop to 20pt when content density requires it. 18pt is a hard floor, used only when 20pt genuinely cannot fit after reducing content. Never use 16pt or smaller for slide body text. If you find yourself setting text to 18pt, first try reducing content: split the slide, remove a bullet, or condense phrasing before dropping below 20pt.
+**Font size principle: compute the largest size that fits attractively, then clamp at the role floor.** The Role-Based Font Hierarchy in Critical Rules is the single canonical size spec; this table summarizes it and defers to it wherever they could be read to differ. Body text starts at its 24-28pt target and steps down via `fit_font_size()` only as the box requires; it reaches the 22pt floor only when content is already minimal (split the slide, remove a bullet, condense phrasing first). Never use 16pt or smaller for slide body text, and never write a floor value as a default.
 
 ## Layout Principles
 
 - **Aspect ratio:** 16:9
 - **Generous margins** and white space between elements
 - **One main idea per slide**
-- **Footer space:** Always leave the bottom 1.3" blank for template footers; do not place content below `FOOTER_TOP = 7.70"` on a 9" slide
+- **Footer and citation zones:** Body content must stay above `CONTENT_BOTTOM = 8.00"`. The citation band occupies T=8.00 to T=8.25. The footer placeholder (slide number, copyright) occupies T=8.38 to T=8.86. On a 16x9 slide this gives 8.00 - 1.95 = 6.05" of content height below the title.
 - **No title slide:** The template provides the title slide; never generate one
 
 ### Layout Selection
@@ -207,12 +246,12 @@ Every shape, chart, and text box must fit within `CONTENT_LEFT` to `CONTENT_LEFT
 - Use solid color-blocked rectangles with rounded or square corners
 - Keep icons and graphics flat, vector, high-contrast
 - Use accent bars (thin vertical rectangles) for left-edge emphasis
-- Use SlateNavy (#1B2A4A) as primary fill for block titles and emphasis boxes within diagrams
+- Use SlateNavy (#1B2A4A) as primary fill for block titles, in-diagram emphasis boxes, and standalone reinforcement callouts (the Beamer `\callout`); recreate callouts as editable filled text boxes, used selectively as in the source, not on every slide
 - Stick to 3 colors per slide, expand to 4 only when needed
 
 ### DON'T
 - Use gradients, glows, drop shadows, or bevels on any element (text, shapes, charts, images)
-- Use text shading, text highlighting, text background fills, or text shadows
+- Use text shading, text highlighting, text background fills behind running text, or text shadows (a deliberate `\callout` reinforcement box, a filled shape with its own text, is not a text background fill and is permitted)
 - Add subtitles under titles
 - Clutter slides with too many elements
 - Use more than 4 accent colors on a single slide
@@ -238,13 +277,13 @@ For each Beamer slide, categorize every visual element into one of four types:
 
 | Type | When to use | PowerPoint implementation |
 |------|------------|--------------------------|
-| **Native chart** | Standard bar, line, scatter, pie charts where data is extractable from the .tex source | `add_chart()` + `fix_chart_fonts()` + palette colors |
+| **Native chart** | Standard bar, line, scatter, pie charts. Read the data points from the `.tex` source programmatically (see "Chart data fidelity" below); never re-key them by eye | `add_chart()` + `fix_chart_fonts()` + palette colors |
 | **Native table** | Data tables | `add_table()` + `fix_table_fonts()` + `fix_table_style()` |
 | **Native shapes/text** | Bullet points, text boxes, simple box layouts, colored boxes with text labels, box-and-arrow diagrams, flowcharts, stacked/layered layouts | `add_shape()` + `add_textbox()` with Calibri formatting |
 | **Hybrid (text + image)** | Two-column Beamer slides where one column is text/bullets and the other is a complex visual | Native text box(es) for the text column + `add_image_proportional()` for the visual column |
 | **Image embed** | LAST RESORT. The visual contains mathematical curve plots with axis annotations, or TikZ paths with Bezier curves/decorative elements that have no PowerPoint shape equivalent, AND it cannot be decomposed into rectangles, arrows, and text labels | Render at 300 DPI, crop, `add_image_proportional()` |
 
-**Hybrid default rule:** Hybrid is the default for any two-column Beamer slide. The text column is ALWAYS recreated as native text boxes at 22pt+ font (20pt minimum). Only the visual column is assessed for native vs. image. A full-slide image embed is only permitted when the slide has no separable text content.
+**Two-column Beamer slides:** Always recreate the text column as native text boxes at the computed fill size (body target 24-28pt via `fit_font_size()`, clamped at the 22pt floor; see "Font Size Rule for Conversion"). Then classify the slide by its visual column: standard bar/line/scatter/column chart → `native chart`; colored boxes, flowcharts, box-and-arrow diagrams, cards, comparison layouts → `native shapes`; data table → `native table`; complex visual that cannot be recreated (Bezier paths, choropleth maps, multi-panel composites) → `hybrid (text + image)`. The `hybrid` classification is reserved for when the visual column genuinely requires an image embed. A two-column slide with bullets + a native pgfplots bar chart is `native chart`, not hybrid. A full-slide image embed is only permitted when the slide has no separable text content.
 
 **Image embed decision rules:**
 
@@ -252,6 +291,8 @@ For each Beamer slide, categorize every visual element into one of four types:
 - **MAY be image embed** (requires written justification): mathematical function plots with axis annotations, complex pgfplots with many overlapping series and fill regions, TikZ diagrams with decorative elements (braces, Bezier curves, custom path decorations), choropleth maps, multi-panel composite figures
 
 **For each slide marked "image embed," write one sentence justifying why it cannot be recreated natively.** If no justification exists, reclassify as native or hybrid.
+
+**Callout boxes (`\callout` in the source).** A `\callout` is a standalone reinforcement box (dark fill, white bold text). Recreate it as a native editable filled text box: `add_rounded_card(slide, ..., border_rgb, fill_rgb)` plus a white text run, never a rasterized image, matching the source fill color. Reproduce only the callouts the Beamer source contains; never add new ones. Contrast: white text is recreated only on the dark source fills (SlateNavy, DeepTeal, AccentRed, DustyPlum, CyanBlue, BurntOrange). The source never fills a callout with green, amber, or soft red: those valences arrive as bold colored text on white (an ordinary editable text run, no fill). If you ever see white text on a light fill, that is a defect to correct, not reproduce.
 
 ### Step 3: Specify output filename
 
@@ -275,9 +316,14 @@ Wait for user approval before proceeding to code generation. Then follow the res
 
 ### Font Size Rule for Conversion
 
-All native text boxes created during Beamer-to-PPTX conversion must target **22-24pt** body text. Drop to 20pt when content density requires it. 18pt is a hard floor, used only when 20pt genuinely cannot fit after reducing content. Never use 16pt or smaller for slide body text.
+Conversion sizes are **computed from the source's hierarchy, then clamped at the role floors**, never flattened to one value. Two steps per text element:
 
-If the Beamer source has dense text that would require fonts below 20pt to fit in a PPTX text box, **reduce content, not font size.** Split the text across two slides, remove less critical bullets, or condense phrasing before dropping below 20pt.
+1. **Carry the Beamer hierarchy proportionally.** Map the source's relative sizes so the deck's visual hierarchy survives: `\normalsize` body anchors at ~24pt; `\large` above it (~28pt); `\Large`/`\LARGE` map to section-header/title sizes; `\small` body lands ~22-24pt; `\footnotesize` secondary text lands at the body-secondary tier; `\scriptsize` maps to its role (citation band, caption, micro-label). A `\large` heading must come out larger than a `\normalsize` body line; flattening every run to one size erases the hierarchy the Beamer deck had.
+2. **Clamp at the role floors** (body 22pt, body secondary 20pt, per the Role-Based Font Hierarchy) and verify fit with `fit_font_size()`/`estimate_text_height()`.
+
+**The PPTX layer cannot manufacture hierarchy the source lacks.** If the Beamer source is uniformly `\footnotesize`/`\small`, proportional mapping clamps most runs to the floor and the quality check's uniform-at-floor signature fires; the defect is upstream in `slides.tex`, and the right response is to report that, not to silently inflate PPTX fonts into a hierarchy the source never had. Apply sizing before any text-fidelity verification pass, and re-run the quality check after any post-verification correction (corrected text can change wrapping).
+
+If the Beamer source has dense text that would require fonts below the role floor to fit in a PPTX text box, **reduce content, not font size.** Split the text across two slides, remove less critical bullets, or condense phrasing.
 
 This applies to all native text boxes: bullet lists, labels, standalone text, hybrid slide text columns, and annotation text. The only exceptions are chart axis labels (14pt per chart font rules), table content (14pt minimum per table rules), and italic caption text (11pt per the caption pattern).
 
@@ -285,46 +331,67 @@ This applies to all native text boxes: bullet lists, labels, standalone text, hy
 
 Every `\sourcecite{}` in the Beamer source must be carried over to the PPTX as a citation text box. Citations are not optional content; they are part of the slide.
 
-**Placement:** Right-justified, positioned just above `FOOTER_TOP` (at approximately `FOOTER_TOP - 0.30"`). The citation text box spans the full `CONTENT_W` width with right-aligned text.
+**Canonical placement:** Fixed position at `L=1.10", T=8.00", W=13.80", H=0.25"` on a 16x9 slide. The citation band sits above the footer strip (footer placeholder occupies `T=8.38"` to `T=8.86"`). Right-aligned text within the full-width box.
 
-**Formatting:** 11pt Calibri Italic, color #B0AFA8 (MedGray), right-aligned.
+**Canonical formatting:** 11pt Calibri non-italic, color #B0AFA8, right-aligned.
+
+**Multi-source citations:** Separate sources with `; ` (semicolon space). Target a single line. If text would wrap, grow the box **upward** (reduce `T` while keeping the bottom edge fixed at `T + H = 8.25"`) so the citation never enters the footer strip.
+
+| Lines | T | H |
+|---|---|---|
+| 1 | 8.00 | 0.25 |
+| 2 | 7.75 | 0.50 |
+| 3 | 7.50 | 0.75 |
 
 ```python
-from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE
 
-CITATION_TOP = FOOTER_TOP - 0.30  # just above footer zone
-CITATION_H   = 0.25
+CITATION_LEFT = 1.10
+CITATION_W    = 13.80
+CITATION_BOTTOM = 8.25   # fixed — citation never extends below this
+CITATION_LINE_H = 0.25   # height per line
 
-def add_citation(slide, citation_text):
-    """Add a right-justified citation text box just above the footer margin."""
+def add_citation(slide, citation_text, lines=1):
+    """Add a right-aligned citation text box at the canonical location.
+
+    Default: single-line, T=8.00, H=0.25. For multi-source or long citations
+    that must wrap to 2 or 3 lines, pass lines=2 or lines=3; the box grows
+    upward while the bottom edge stays fixed at 8.25.
+    """
+    h = CITATION_LINE_H * lines
+    t = CITATION_BOTTOM - h
     txbox = slide.shapes.add_textbox(
-        Inches(CONTENT_LEFT), Inches(CITATION_TOP),
-        Inches(CONTENT_W), Inches(CITATION_H)
+        Inches(CITATION_LEFT), Inches(t),
+        Inches(CITATION_W), Inches(h)
     )
     tf = txbox.text_frame
+    tf.auto_size = MSO_AUTO_SIZE.NONE   # lock canonical height (Critical Rule 6)
     tf.word_wrap = True
     p = tf.paragraphs[0]
     p.alignment = PP_ALIGN.RIGHT
     run = p.add_run()
     run.text = citation_text
     run.font.size = Pt(11)
-    run.font.italic = True
+    run.font.italic = False
     run.font.color.rgb = RGBColor(0xB0, 0xAF, 0xA8)
     run.font.name = "Calibri"
     return txbox
 ```
 
-**Extraction:** Parse each slide's `\sourcecite{...}` content from the `.tex` source. Strip LaTeX formatting (`\textit{}` becomes plain text; backslash escapes become their characters). If a slide has `\sourcecite{}`, the PPTX slide must have a citation text box. If a slide has no `\sourcecite{}`, do not add one.
+**Extraction:** Parse each slide's `\sourcecite{...}` content from the `.tex` source. Strip LaTeX formatting (drop `\textit{}` wrappers to produce plain text; backslash escapes become their characters). If a slide has `\sourcecite{}`, the PPTX slide must have a citation text box. If a slide has no `\sourcecite{}`, do not add one.
+
+**Line count estimation:** With Calibri 11pt at a 13.80" width, a single line fits approximately 160-180 characters. Pass `lines=2` when the citation text exceeds ~160 characters or when it contains two or more sources joined by `; `. Pass `lines=3` only for genuinely long multi-source citations (>320 characters).
 
 ### Vertical Text Alignment
 
 All text frames in content shapes (text boxes, rounded rectangles, auto shapes) must use **top vertical alignment** by default. python-pptx defaults rounded rectangles to middle alignment, which pushes text down from the top edge and creates inconsistent visual spacing. Set `text_frame.vertical_anchor = MSO_ANCHOR.TOP` explicitly on every shape that contains text.
 
 ```python
-from pptx.enum.text import MSO_ANCHOR
+from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE
 
 # After creating a shape or text box:
 tf = shape.text_frame
+tf.auto_size = MSO_AUTO_SIZE.NONE    # lock dimensions (Critical Rule 6)
 tf.vertical_anchor = MSO_ANCHOR.TOP  # always set explicitly
 ```
 
@@ -336,8 +403,8 @@ Related text content on a slide must go in **one continuous text box** with para
 
 **Rule:** When a Beamer slide has a text column containing a heading followed by bullet points (or multiple formatted paragraphs), recreate this as a single text box with multiple paragraphs. Use paragraph-level properties for differentiation:
 
-- **Section headers within a text box:** Bold run, 20-24pt
-- **Bullet points:** Normal weight, 22pt (drop to 20pt if density requires), with `paragraph.level` set to create indent
+- **Section headers within a text box:** Bold run, sized 2-4pt above the body size (see the canonical scaffold's `body_pt + 4` pattern)
+- **Bullet points:** Normal weight, at the computed body size (22pt floor), with `paragraph.level` set to create indent
 - **Sub-bullets:** 20pt, `paragraph.level = 1` for additional indent
 - **Spacing between sections:** Use `paragraph.space_before = Pt(12)` to separate logical sections within one text box
 
@@ -345,11 +412,12 @@ Related text content on a slide must go in **one continuous text box** with para
 
 ```python
 from pptx.util import Inches, Pt, Emu
-from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE
 from pptx.dml.color import RGBColor
 
 # Single text box with header + bullets:
 tf = txbox.text_frame
+tf.auto_size = MSO_AUTO_SIZE.NONE   # lock dimensions (Critical Rule 6)
 tf.word_wrap = True
 
 # Section header paragraph
@@ -382,11 +450,22 @@ When the Beamer source uses `\begin{itemize}` or `\begin{enumerate}`, the PPTX m
 from pptx.oxml.ns import qn
 from lxml import etree
 
-def set_bullet(paragraph, level=0, bullet_char='\u2022'):
-    """Set a bullet character on a paragraph."""
+def set_bullet(paragraph, level=0, bullet_char='\u2022', typeface='Arial'):
+    """Set a bullet character on a paragraph.
+
+    Always pairs <a:buFont typeface="..."/> with <a:buChar/>; PowerPoint
+    flags <a:buChar> alone as malformed and strips the bullet during repair.
+    """
     paragraph.level = level
     pPr = paragraph._p.get_or_add_pPr()
-    # Add bullet character
+    # Bullet font (typeface) must precede bullet char per OOXML schema order
+    for existing in pPr.findall(qn('a:buFont')):
+        pPr.remove(existing)
+    buFont = etree.SubElement(pPr, qn('a:buFont'))
+    buFont.set('typeface', typeface)
+    # Bullet character
+    for existing in pPr.findall(qn('a:buChar')):
+        pPr.remove(existing)
     buChar = etree.SubElement(pPr, qn('a:buChar'))
     buChar.set('char', bullet_char)
 
@@ -483,6 +562,28 @@ Recreate charts using python-pptx's chart API (`add_chart()`). This includes bar
 - Data labels must use the same format as the Beamer chart
 - Bar/series colors must use the style guide palette
 - No shadows, gradients, or 3D effects on any chart element
+
+### Chart data fidelity: read the points, do not re-key them
+
+**The data for a native chart must be READ from `slides.tex`, never transcribed by eye.** Re-keying chart numbers from a glance at the source is how a 17-point monthly curve once became a 4-point yearly one with nobody noticing: the result looked plausible and no check compared the data (only text and composition were checked). Remove the eyeball step with a parser, and add a verification pass that compares the built chart back against the source.
+
+**The pattern.** Write (or reuse) a small parser that reads the pgfplots coordinate values out of `slides.tex`: one chart record per `\begin{axis}` in document order, each carrying the frame title, the chart kind (bar vs. line), whether x is numeric or categorical, every series' `(x, y)` points and legend label, any reference lines drawn as `\draw (axis cs:..) -- (axis cs:..)`, and any raw spans it could not parse. Exclude forget-plot and fill-region series from the data series. Coalesce the one-`\addplot`-per-bar idiom into a single series, so a bar chart reads as one series of N points, matching its single PPTX category series.
+
+**Prevention: feed the parsed points into the chart.** When building a native chart, take its categories and values from the parsed record for that slide (keyed on the frame title), not from a mental summary of the source.
+
+**Axis-type rule.** When the source x-coordinates are continuous or unevenly spaced (true time, decimals, gaps), build an **XY chart** (`XL_CHART_TYPE.XY_SCATTER_LINES*` with `XyChartData`), not a category chart. Collapsing a numeric time axis onto evenly spaced text categories silently distorts the chart. Use a category chart (`CategoryChartData`) only when x is sequential integer positions or symbolic categories.
+
+**Markers.** If the source draws reference lines (e.g., a dashed vertical event marker), reproduce each as a thin two-point series (or a line shape) at its exact x, so the source reference line survives into the PPTX.
+
+**Charts the parser cannot read.** If a chart contains spans the parser refused (a function/expression plot, error bars) or the figure is a rendered image embed, the parser cannot supply points; hand-build the chart AND flag it as unverified for manual review. Never hand-key a chart silently.
+
+**Verification (mandatory, pre-save).** After the deck is built and `run_quality_check()` passes, verify every native chart's series against the source coordinates (matching by slide title, then series name) and report three classes of finding:
+
+- **Divergence**: a value differs; the source is truth, correct the PPTX series and re-run.
+- **Unverified**: a structural mismatch (point or series count), or a source the parser could not read (so the chart was hand-built); review it, do not ship it silently.
+- **Marker**: a source reference line with no matching PPTX series; confirm it was preserved.
+
+An empty report means every native chart matched the source within tolerance. A non-empty report is never a silent pass; surface it. This is the chart analog of the text-fidelity verification pass, and it inherits the same fail-loud contract: a chart the verification cannot confirm is reported, never assumed correct.
 
 ### Chart font sizes: mandatory XML fix
 
@@ -685,8 +786,8 @@ Target: **18pt** for all table text. Use 14pt only when a table has dense conten
 python-pptx's `add_table()` produces a table whose `<a:tableStyleId>` is the **null GUID** `{00000000-0000-0000-0000-000000000000}`. This GUID **crashes LibreOffice 26 on PPTX import**. Setting a real built-in style GUID avoids the crash. The canonical safe choice is `{2D5ABB26-0587-4C30-8999-92F81FD0307C}` ("No Style, No Grid"), which provides no visual styling and does not override cell-level paragraph alignment.
 
 Two GUIDs are forbidden:
-- `{00000000-0000-0000-0000-000000000000}` (null) — crashes LibreOffice 26.
-- `{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}` ("Medium Style 2 - Accent 1") — silently overrides `para.alignment = PP_ALIGN.CENTER` and similar cell-level specs.
+- `{00000000-0000-0000-0000-000000000000}` (null): crashes LibreOffice 26.
+- `{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}` ("Medium Style 2 - Accent 1"): silently overrides `para.alignment = PP_ALIGN.CENTER` and similar cell-level specs.
 
 ```python
 def fix_table_style(table_shape):
@@ -812,18 +913,286 @@ Grid layouts (2x2, 2x3, 3x2) with content boxes are constrained by `CONTENT_H = 
 - May use up to 4 colors for different categories
 - Four-box layout for strategic frameworks
 
+## Canonical Generator Template
+
+This is the known-good starter scaffold for a new PPTX generator. Every helper below bakes in the rules defined earlier (auto_size locked, Charcoal body text, canonical citation, hanging indents), so copy-paste extension produces compliant output without re-deriving each rule.
+
+**Use this as the starting point for every PPTX script.** Adapt the slide loop to the deck's content, but do not edit the helper bodies without a clear reason; they encode the rules.
+
+```python
+"""Canonical PPTX generator scaffold.
+
+Starting point for any new deck. Every helper enforces the style guide's
+rules (auto_size=NONE, Charcoal default, canonical citation, hanging
+indents on bullets). Extend the slide section; leave helpers alone.
+"""
+import math, os, sys
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR, MSO_AUTO_SIZE
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.oxml.ns import qn
+from lxml import etree
+
+TEMPLATE_PATH = "path/to/your-template.pptx"  # set this for your project
+OUTPUT_PATH = '/absolute/path/to/deck.pptx'   # edit me
+
+IN = 914400   # EMU per inch
+
+# --- Layout constants -------------------------------------------------------
+CONTENT_LEFT   = 1.10
+CONTENT_TOP    = 1.95
+CONTENT_W      = 13.80
+CONTENT_BOTTOM = 8.00
+CITATION_LEFT   = 1.10
+CITATION_W      = 13.80
+CITATION_BOTTOM = 8.25
+CITATION_LINE_H = 0.25
+
+# --- Palette ---------------------------------------------------------------
+CHARCOAL   = RGBColor(0x4D, 0x4D, 0x4D)   # body text default
+SLATE_NAVY = RGBColor(0x1B, 0x2A, 0x4A)
+DEEP_TEAL  = RGBColor(0x0D, 0x73, 0x77)
+CYAN_BLUE  = RGBColor(0x00, 0x77, 0xB6)
+DUSTY_PLUM = RGBColor(0x9B, 0x59, 0x78)
+WARM_AMBER = RGBColor(0xE8, 0x91, 0x3A)
+ACCENT_RED = RGBColor(0xC0, 0x39, 0x2B)
+MED_GRAY   = RGBColor(0xB0, 0xAF, 0xA8)   # citations ONLY
+PALE_BLUE  = RGBColor(0xE8, 0xF0, 0xF8)
+WHITE      = RGBColor(0xFF, 0xFF, 0xFF)
+
+def tint(rgb, pct):
+    """Mix rgb with white. pct=12 → 12% of color, 88% white."""
+    r = int(rgb[0] + (255 - rgb[0]) * (1 - pct / 100))
+    g = int(rgb[1] + (255 - rgb[1]) * (1 - pct / 100))
+    b = int(rgb[2] + (255 - rgb[2]) * (1 - pct / 100))
+    return RGBColor(r, g, b)
+
+# --- Helpers (rules baked in) ----------------------------------------------
+def set_bullet(paragraph, level=0, bullet_char='•', typeface='Arial'):
+    """Always pairs <a:buFont/> with <a:buChar/>; PowerPoint flags
+    <a:buChar> alone as malformed and strips the bullet during repair."""
+    paragraph.level = level
+    pPr = paragraph._p.get_or_add_pPr()
+    for existing in pPr.findall(qn('a:buFont')):
+        pPr.remove(existing)
+    buFont = etree.SubElement(pPr, qn('a:buFont'))
+    buFont.set('typeface', typeface)
+    for existing in pPr.findall(qn('a:buChar')):
+        pPr.remove(existing)
+    buChar = etree.SubElement(pPr, qn('a:buChar'))
+    buChar.set('char', bullet_char)
+
+def set_hanging_indent(paragraph, margin_inches=0.30, indent_inches=-0.25):
+    pPr = paragraph._p.get_or_add_pPr()
+    pPr.set('marL', str(int(Inches(margin_inches))))
+    pPr.set('indent', str(int(Inches(indent_inches))))
+
+def add_citation(slide, text, lines=1):
+    """Canonical citation band. Grows upward for multi-line; bottom fixed at 8.25."""
+    h = CITATION_LINE_H * lines
+    t = CITATION_BOTTOM - h
+    tb = slide.shapes.add_textbox(
+        Inches(CITATION_LEFT), Inches(t), Inches(CITATION_W), Inches(h))
+    tf = tb.text_frame
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.word_wrap = True
+    tf.margin_left = tf.margin_right = Inches(0.05)
+    tf.margin_top = tf.margin_bottom = Inches(0.02)
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.RIGHT
+    r = p.add_run()
+    r.text = text
+    r.font.size = Pt(11)
+    r.font.italic = False
+    r.font.name = "Calibri"
+    r.font.color.rgb = MED_GRAY
+    return tb
+
+def add_rounded_card(slide, left, top, w, h, border_rgb, fill_rgb):
+    """Rounded rectangle with canonical text-frame setup."""
+    shape = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        Inches(left), Inches(top), Inches(w), Inches(h))
+    shape.line.color.rgb = border_rgb
+    shape.line.width = Pt(1)
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = fill_rgb
+    shape.adjustments[0] = 0.08
+    # Strip the auto-added <p:style> theme-color block. python-pptx attaches
+    # it on every preset autoshape, but it conflicts with the explicit srgb
+    # fill/line set above and causes PowerPoint to "repair and remove" the
+    # shape on file open. (Critical Rule 7.)
+    sp_el = shape._element
+    style_el = sp_el.find(qn('p:style'))
+    if style_el is not None:
+        sp_el.remove(style_el)
+    tf = shape.text_frame
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.word_wrap = True
+    tf.margin_left = tf.margin_right = Inches(0.20)
+    tf.margin_top = tf.margin_bottom = Inches(0.15)
+    tf.vertical_anchor = MSO_ANCHOR.TOP
+    return shape
+
+def add_body_textbox(slide, left, top, w, h):
+    """Plain text box with canonical defaults."""
+    tb = slide.shapes.add_textbox(Inches(left), Inches(top), Inches(w), Inches(h))
+    tf = tb.text_frame
+    tf.auto_size = MSO_AUTO_SIZE.NONE
+    tf.word_wrap = True
+    tf.vertical_anchor = MSO_ANCHOR.TOP
+    return tb
+
+def add_paragraph(tf, text, size=24, bold=False, color=CHARCOAL,
+                  bullet=False, space_before=None, alignment=PP_ALIGN.LEFT,
+                  first=False):
+    """Add a paragraph; `first=True` reuses tf.paragraphs[0] (empty default)."""
+    p = tf.paragraphs[0] if first else tf.add_paragraph()
+    p.alignment = alignment
+    if space_before is not None:
+        p.space_before = Pt(space_before)
+    if bullet:
+        set_bullet(p)
+        set_hanging_indent(p)
+    r = p.add_run()
+    r.text = text
+    r.font.size = Pt(size)
+    r.font.bold = bold
+    r.font.name = "Calibri"
+    r.font.color.rgb = color
+    return p
+
+def estimate_text_height(text, box_width_inches, font_size_pt, line_spacing=1.4):
+    """Estimated rendered height in inches (same function as Content Fitting)."""
+    chars_per_line = max(1, box_width_inches * 72 / (font_size_pt * 0.55))
+    lines_needed = math.ceil(len(text) / chars_per_line)
+    return lines_needed * font_size_pt * line_spacing / 72
+
+ROLE_RANGES = {              # (ceiling, floor) pt, per Role-Based Font Hierarchy
+    'body':           (28, 22),
+    'body_secondary': (22, 20),
+    'label':          (22, 16),
+    'micro':          (16, 12),
+}
+
+def fit_font_size(paragraph_texts, box_w, box_h, role='body'):
+    """Largest size in the role's range whose stacked estimated height fits the box.
+
+    Compute-then-clamp (Critical Rule 1): start at the role ceiling, step down
+    1pt while the estimated total height exceeds the box height, stop at the
+    role floor. The floor is a clamp on the computed value, never the starting
+    size — do not write a floor literal as a default. The box itself must
+    respect the content-area and grid limits (an oversized box does not make a
+    size "fit"), and the overflow check in run_quality_check() still applies.
+    """
+    ceiling, floor = ROLE_RANGES[role]
+    size = ceiling
+    while size > floor:
+        total = sum(estimate_text_height(t, box_w, size) for t in paragraph_texts)
+        if total <= box_h * 0.92:    # margin for paragraph spacing
+            return size
+        size -= 1
+    return floor
+
+def add_title(slide, text):
+    ph = slide.placeholders[0]
+    ph.text = ""
+    p = ph.text_frame.paragraphs[0]
+    p.alignment = PP_ALIGN.LEFT
+    r = p.add_run()
+    r.text = text
+    r.font.size = Pt(36)
+    r.font.bold = True
+    r.font.name = "Calibri"
+    r.font.color.rgb = CHARCOAL
+    return ph
+
+def remove_existing_slides(prs):
+    xml_slides = prs.slides._sldIdLst
+    for sldId in list(xml_slides):
+        prs.part.drop_rel(sldId.get(qn('r:id')))
+        xml_slides.remove(sldId)
+
+# --- Build deck ------------------------------------------------------------
+prs = Presentation(TEMPLATE_PATH)
+remove_existing_slides(prs)
+
+title_only = next(
+    (l for l in prs.slide_layouts if l.name == "Title Only"),
+    prs.slide_layouts[5])
+
+# ------ Slide 1 (replace with real content) ------
+slide = prs.slides.add_slide(title_only)
+add_title(slide, "Your Title Here (the key message)")
+
+card = add_rounded_card(slide,
+    left=CONTENT_LEFT, top=CONTENT_TOP + 0.10,
+    w=CONTENT_W, h=5.00,
+    border_rgb=DEEP_TEAL, fill_rgb=tint(DEEP_TEAL, 8))
+tf = card.text_frame
+# Compute the body size for this box, then pass it — never hardcode a floor.
+bullets = ["First supporting bullet.", "Second supporting bullet."]
+body_pt = fit_font_size(["Section header"] + bullets, box_w=CONTENT_W - 0.4, box_h=4.6, role='body')
+add_paragraph(tf, "Section header", size=body_pt + 4, bold=True, first=True)
+add_paragraph(tf, bullets[0], size=body_pt, bullet=True, space_before=10)
+add_paragraph(tf, bullets[1], size=body_pt, bullet=True, space_before=10)
+
+add_citation(slide, "Author, First. YYYY. Title. Publication.")
+
+# ------ Add more slides the same way ------
+
+# --- Quality check + save --------------------------------------------------
+# run_quality_check() is defined in the Pre-Save Structural Quality Check
+# section below; copy that function into this file (or import it).
+issues = run_quality_check(prs)
+errors = [i for i in issues if not i.startswith("WARNING:")]
+warnings = [i for i in issues if i.startswith("WARNING:")]
+
+if errors:
+    print(f"QUALITY CHECK FAILED — {len(errors)} error(s):")
+    for e in errors:
+        print(f"  • {e}")
+    sys.exit("Fix errors before saving.")
+if warnings:
+    print(f"Quality check passed with {len(warnings)} warning(s):")
+    for w in warnings:
+        print(f"  • {w}")
+else:
+    print(f"Quality check passed ({len(prs.slides)} slides).")
+
+prs.save(OUTPUT_PATH)
+print(f"Saved: {OUTPUT_PATH}")
+```
+
+**Extension guidance:**
+
+- For charts, call `fix_chart_fonts(chart)` immediately after `add_chart()`; see "Chart and Diagram Conversion" above for the full function body and axis/legend rules.
+- For tables, use `add_table()` then call `fix_table_fonts()` and `fix_table_style()`; see "Tables" above.
+- For multi-column layouts, compute column widths from `CONTENT_W` using the formula `(CONTENT_W - (n-1)*GAP) / n` (see "Multi-Box Layouts").
+- For multi-line citations, pass `lines=2` or `lines=3` to `add_citation()`.
+- If a body shape needs `MSO_ANCHOR.MIDDLE` (single-line label), set `tf.vertical_anchor = MSO_ANCHOR.MIDDLE` after `add_rounded_card()`; do not remove the `auto_size = NONE` assignment.
+
 ## Pre-Save Structural Quality Check
 
 **Run this check on every PPTX before calling `prs.save()`.** It catches the most common generation errors that are invisible to visual inspection of the code: overlapping shapes, out-of-bounds positioning, hardcoded small fonts in chart XML, bad table style GUIDs, and missing legend/color rules.
 
 ```python
-def run_quality_check(prs):
+def run_quality_check(prs, conversion_source=None):
     """
     Structural quality check. Returns a list of issue strings.
     Empty list = all clear. Run before prs.save().
 
+    conversion_source: path to the Beamer slides.tex when this PPTX is a
+    conversion; None for direct generation. Controls the severity of the
+    uniform-at-floor check (#18): blocking error at generation (the generator
+    controls sizes and must compute them), surfaced warning at conversion
+    (the PPTX inherits the source; the fix is upstream in slides.tex).
+
     Catches:
-      1. Shapes outside content area bounds
+      1. Shapes outside content area bounds (role-aware: citations may sit in
+         the citation band)
       2. Overlapping shapes on the same slide
       3. Chart axis/legend font < 14pt (hardcoded in XML by python-pptx)
       4. Line chart legend not positioned RIGHT
@@ -833,18 +1202,35 @@ def run_quality_check(prs):
       8. Conversion coverage — flags when >40% of slides are single-image-only
          (with reclassification guidance: hybrid, native shapes, or native chart)
       9. Vertical alignment is MIDDLE on multi-line content shapes (should be TOP)
-     10. Text box body font < 20pt (excludes chart axes, tables, and italic captions)
+     10. Role-based font floor — citation 11pt, micro-label 12pt, in-shape label
+         16pt, body 22pt; role inferred from shape position and size
      11. Chart axis number format left as default (warns to apply explicit number_format)
      12. Bullet paragraphs missing hanging indent (negative indent attribute)
      13. Text box body font below target (20-21pt) — warning, not blocker
      14. Text overflow — estimated text height exceeds shape height by >10%
+     15. Off-spec gray color on body text — gray-toned run color not in the approved
+         gray whitelist (catches regressions like #3A3A3A in place of Charcoal)
+     16. <p:style> theme block conflicting with explicit srgb fill/line on a shape
+         (PowerPoint repair-and-remove)
+     17. <a:buChar> without paired <a:buFont> (PowerPoint strips the bullet)
+     18. Uniform-at-floor signature — >50% of body-role runs within 1pt of the 22pt
+         floor (min 8 body runs). ERROR at generation; WARNING with an upstream
+         pointer when conversion_source is set.
+     19. Box under-fill — estimated text height under 60% of the box height while a
+         larger in-role size would fit (WARNING; compute the size, then clamp)
     """
     from pptx.oxml.ns import qn
     from pptx.enum.chart import XL_LEGEND_POSITION
 
     IN = 914400
     CONTENT_LEFT = 1.10;  CONTENT_TOP = 1.95
-    FOOTER_TOP   = 7.70;  CONTENT_W   = 13.80
+    CONTENT_W   = 13.80
+    # Body content must end above CONTENT_BOTTOM (leaves room for citation band).
+    # Citations live in the citation band at T=8.00 to T=8.25.
+    # Actual footer placeholder begins at 8.38.
+    CONTENT_BOTTOM  = 8.00   # body content max bottom edge
+    CITATION_BOTTOM = 8.25   # citation max bottom edge
+    FOOTER_TOP      = CONTENT_BOTTOM  # legacy alias
     MAX_RIGHT = CONTENT_LEFT + CONTENT_W   # 14.90
 
     # Null GUID — python-pptx's add_table() default. Crashes LibreOffice 26
@@ -883,15 +1269,22 @@ def run_quality_check(prs):
                 continue  # intentional full-slide background — skip
             content.append((s, l, t, w, h))
 
-        # 1. Position bounds
+        # 1. Position bounds (role-aware)
         for s, l, t, w, h in content:
             n = s.name
+            # Detect citation role by position — allowed in citation band
+            is_citation = (7.4 <= t <= 8.3 and h <= 0.85)
             if l < CONTENT_LEFT - 0.05:
-                issues.append(f"{lbl} '{n}': left={l:.2f}\" (need >=|{CONTENT_LEFT}\")")
-            if t < CONTENT_TOP - 0.05:
+                issues.append(f"{lbl} '{n}': left={l:.2f}\" (need >={CONTENT_LEFT}\")")
+            if t < CONTENT_TOP - 0.05 and not is_citation:
                 issues.append(f"{lbl} '{n}': top={t:.2f}\" (need >={CONTENT_TOP}\")")
-            if t + h > FOOTER_TOP + 0.05:
-                issues.append(f"{lbl} '{n}': bottom={t+h:.2f}\" (need <={FOOTER_TOP}\" — footer zone)")
+            # Body content stays above CONTENT_BOTTOM; citations stay above CITATION_BOTTOM
+            if is_citation:
+                if t + h > CITATION_BOTTOM + 0.05:
+                    issues.append(f"{lbl} '{n}': citation bottom={t+h:.2f}\" (need <={CITATION_BOTTOM}\" — would enter footer strip)")
+            else:
+                if t + h > CONTENT_BOTTOM + 0.05:
+                    issues.append(f"{lbl} '{n}': bottom={t+h:.2f}\" (need <={CONTENT_BOTTOM}\" — citation band)")
             if l + w > MAX_RIGHT + 0.10:
                 issues.append(f"{lbl} '{n}': right={l+w:.2f}\" (need <={MAX_RIGHT}\")")
 
@@ -1049,7 +1442,22 @@ def run_quality_check(prs):
                         f"content shape — set text_frame.vertical_anchor = MSO_ANCHOR.TOP"
                     )
 
-    # 10. Text box body font size must be >= 20pt
+    # 10. Role-based font floor check.
+    #     Role is inferred from shape position and size:
+    #       - Citation band (T in 7.4-8.3, H <= 0.85): floor = 11pt
+    #       - Small annotation (W < 2.5" AND H < 0.6"): floor = 12pt (micro-label role)
+    #       - In-shape label (W < 3.5" AND H < 1.2"): floor = 16pt (label role)
+    #       - Everything else: floor = 22pt (body role)
+    #     Violations below the role floor are errors.
+    def _role_floor(left_in, top_in, width_in, height_in):
+        if 7.4 <= top_in <= 8.3 and height_in <= 0.85:
+            return ("citation", 11)
+        if width_in < 2.5 and height_in < 0.6:
+            return ("micro-label", 12)
+        if width_in < 3.5 and height_in < 1.2:
+            return ("in-shape label", 16)
+        return ("body", 22)
+
     for si3, slide3 in enumerate(prs.slides, start=1):
         lbl3 = f"Slide {si3}"
         for s in slide3.shapes:
@@ -1060,16 +1468,19 @@ def run_quality_check(prs):
                 continue
             if not s.has_text_frame:
                 continue
+            if s.left is None:
+                continue
             sn = s.name
+            l_in, t_in = s.left/IN, s.top/IN
+            w_in, h_in = s.width/IN, s.height/IN
+            role, floor_pt = _role_floor(l_in, t_in, w_in, h_in)
             for p in s.text_frame.paragraphs:
                 for run in p.runs:
-                    if run.font.size is not None and run.font.size < Pt(20):
-                        # Exception: italic text at 12pt or less (caption text)
-                        if run.font.italic and run.font.size <= Pt(12):
-                            continue
+                    if run.font.size is not None and run.font.size < Pt(floor_pt):
                         issues.append(
-                            f"{lbl3} '{sn}': text box font {run.font.size.pt:.0f}pt "
-                            f"(need >=20pt; target 22-24pt) — increase font size or reduce content"
+                            f"{lbl3} '{sn}': {role} font {run.font.size.pt:.0f}pt "
+                            f"(need >={floor_pt}pt for this role) — "
+                            f"{'reduce content' if role == 'body' else 'adjust role or size'}"
                         )
                         break  # one issue per shape is enough
                 else:
@@ -1187,6 +1598,233 @@ def run_quality_check(prs):
                     f"reduce content, increase box height, or split across slides"
                 )
 
+    # 15. Off-spec gray color on body text.
+    #     A run's color is "gray-toned" when max(R,G,B) - min(R,G,B) <= 15.
+    #     Gray-toned runs must match one of the approved palette grays below.
+    #     This catches near-Charcoal regressions like #3A3A3A, #555555, #333333
+    #     without flagging colored accent runs (SlateNavy emphasis, DeepTeal
+    #     highlight text, etc.), which are NOT gray-toned and so are skipped.
+    #
+    #     Carve-outs (already implied by the gray-tone filter; stated for clarity):
+    #       - Citation text boxes are skipped by position (citation band).
+    #       - Charts are skipped (has_chart).
+    #       - Tables are skipped (has_table).
+    #       - Images are skipped (shape_type == 13).
+    #       - Accent-colored runs are skipped because their colors are not gray-toned.
+    APPROVED_GRAYS = {
+        (0x4D, 0x4D, 0x4D),  # Charcoal — primary body text
+        (0xB0, 0xAF, 0xA8),  # MedGray — citation only
+        (0x6C, 0x7A, 0x89),  # Medium Gray — connectors/neutral states
+        (0x42, 0x55, 0x63),  # Slate Blue — default outlines
+        (0xF0, 0xEF, 0xEC),  # LightGray — spare fill
+        (0xFF, 0xFF, 0xFF),  # White — text on dark fills
+        (0x00, 0x00, 0x00),  # Black — occasional emphasis
+    }
+    for si8, slide8 in enumerate(prs.slides, start=1):
+        if slide8._element.get('show') == '0':
+            continue
+        lbl8 = f"Slide {si8}"
+        for s in slide8.shapes:
+            if s.is_placeholder or s.has_chart or s.has_table:
+                continue
+            if s.shape_type == 13:
+                continue
+            if not s.has_text_frame:
+                continue
+            # Skip citation shapes (authorized MedGray by role)
+            if s.left is not None:
+                t_in = s.top / IN
+                h_in = s.height / IN
+                if 7.4 <= t_in <= 8.3 and h_in <= 0.85:
+                    continue
+            sn = s.name
+            reported_this_shape = False
+            for p in s.text_frame.paragraphs:
+                if reported_this_shape:
+                    break
+                for run in p.runs:
+                    try:
+                        rgb = run.font.color.rgb
+                    except AttributeError:
+                        continue
+                    if rgb is None:
+                        continue
+                    hex_str = str(rgb)
+                    if len(hex_str) != 6:
+                        continue
+                    try:
+                        r = int(hex_str[0:2], 16)
+                        g = int(hex_str[2:4], 16)
+                        b = int(hex_str[4:6], 16)
+                    except ValueError:
+                        continue
+                    spread = max(r, g, b) - min(r, g, b)
+                    if spread > 15:
+                        continue   # colored accent, not gray-toned — skip
+                    if (r, g, b) in APPROVED_GRAYS:
+                        continue
+                    issues.append(
+                        f"{lbl8} '{sn}': off-spec gray #{hex_str.upper()} on body text "
+                        f"— use #4D4D4D (Charcoal); MedGray #B0AFA8 is reserved for citations"
+                    )
+                    reported_this_shape = True
+                    break
+
+    # 16. PowerPoint repair-warning prevention: <p:style> conflicting with explicit srgb fill.
+    #     python-pptx auto-attaches a <p:style> theme-color block to every preset autoshape.
+    #     When the generator also sets explicit srgb fill or line via spPr (as add_rounded_card
+    #     does), PowerPoint detects the conflict and silently strips the shape during repair
+    #     ("PowerPoint couldn't read some content - Repaired and removed it"). Critical Rule 7.
+    #
+    #     Detection: shape has both <p:style> AND explicit <a:solidFill> in spPr. Either:
+    #       - drop <p:style> after add_shape() (preferred; bake into helpers), or
+    #       - rely on <p:style> theme colors and remove the explicit srgb fill.
+    p_ns = 'http://schemas.openxmlformats.org/presentationml/2006/main'
+    a_ns = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+    for si9, slide9 in enumerate(prs.slides, start=1):
+        if slide9._element.get('show') == '0':
+            continue
+        lbl9 = f"Slide {si9}"
+        for s in slide9.shapes:
+            if s.is_placeholder or s.has_chart or s.has_table:
+                continue
+            if s.shape_type == 13:  # picture
+                continue
+            sp_el = s._element
+            style_el = sp_el.find(f'{{{p_ns}}}style')
+            sp_pr = sp_el.find(f'{{{p_ns}}}spPr')
+            if style_el is not None and sp_pr is not None:
+                has_explicit_fill = sp_pr.find(f'{{{a_ns}}}solidFill') is not None
+                has_explicit_line = sp_pr.find(f'{{{a_ns}}}ln') is not None
+                if has_explicit_fill or has_explicit_line:
+                    issues.append(
+                        f"{lbl9} '{s.name}': <p:style> theme-color block conflicts with "
+                        f"explicit srgb fill/line in spPr — PowerPoint will repair-and-remove "
+                        f"on file open. Drop the <p:style> element after add_shape(); see "
+                        f"add_rounded_card() for the canonical fix."
+                    )
+
+    # 17. PowerPoint repair-warning prevention: <a:buChar> without paired <a:buFont>.
+    #     PowerPoint requires a typeface to render the bullet character. A bare <a:buChar>
+    #     element is flagged as malformed and the bullet is stripped during repair, so the
+    #     paragraph renders without its leading bullet. Critical Rule 7.
+    for si10, slide10 in enumerate(prs.slides, start=1):
+        if slide10._element.get('show') == '0':
+            continue
+        lbl10 = f"Slide {si10}"
+        for s in slide10.shapes:
+            if not s.has_text_frame:
+                continue
+            sn = s.name
+            for p in s.text_frame.paragraphs:
+                pPr = p._p.find(qn('a:pPr'))
+                if pPr is None:
+                    continue
+                buChar = pPr.find(qn('a:buChar'))
+                if buChar is None:
+                    continue
+                buFont = pPr.find(qn('a:buFont'))
+                if buFont is None or not buFont.get('typeface'):
+                    issues.append(
+                        f"{lbl10} '{sn}': <a:buChar> without paired <a:buFont typeface=...> "
+                        f"— PowerPoint will repair-and-remove the bullet. Use set_bullet() "
+                        f"which always pairs the two."
+                    )
+                    break  # one issue per shape
+
+    # 18. Uniform-at-floor signature — the floor was written as a default.
+    #     Collect every body-role run (same _role_floor classification as #10);
+    #     if >50% sit within 1pt of the 22pt floor (i.e. 22.0–22.9pt) the sizes
+    #     were never computed. Guards: needs >=8 body runs deck-wide (no
+    #     statistical basis on tiny decks), and "within 1pt" so nudging a few
+    #     runs to 23pt cannot game the test. Severity is context-split:
+    #       - Generation (conversion_source=None): ERROR. The generator owns the
+    #         sizes; compute-then-clamp via fit_font_size() before saving. The
+    #         failure message says compute or reduce content — never inflate
+    #         fonts just to clear the check.
+    #       - Conversion (conversion_source set): WARNING. The PPTX inherits a
+    #         uniformly small Beamer source; the fix is upstream in slides.tex,
+    #         so surface it and point there.
+    body_run_sizes = []
+    for si11, slide11 in enumerate(prs.slides, start=1):
+        if slide11._element.get('show') == '0':
+            continue
+        for s in slide11.shapes:
+            if s.is_placeholder or s.has_chart or s.has_table:
+                continue
+            if s.shape_type == 13 or not s.has_text_frame or s.left is None:
+                continue
+            role, _fl = _role_floor(s.left/IN, s.top/IN, s.width/IN, s.height/IN)
+            if role != 'body':
+                continue
+            for p in s.text_frame.paragraphs:
+                for run in p.runs:
+                    if run.font.size is not None and run.text.strip():
+                        body_run_sizes.append(run.font.size.pt)
+    if len(body_run_sizes) >= 8:
+        at_floor = sum(1 for sz in body_run_sizes if 22.0 <= sz < 23.0)
+        if at_floor / len(body_run_sizes) > 0.5:
+            msg = (
+                f"UNIFORM-AT-FLOOR: {at_floor} of {len(body_run_sizes)} body runs sit at "
+                f"the 22pt floor — the floor was written as a default, not a clamp on a "
+                f"computed size. "
+            )
+            if conversion_source:
+                issues.append(
+                    f"WARNING: {msg}This deck is a conversion; the source "
+                    f"({conversion_source}) is uniformly small and the PPTX cannot "
+                    f"manufacture hierarchy the source lacks. Fix upstream in the "
+                    f"Beamer source (slides.tex), and report this to the user — "
+                    f"do not silently inflate fonts."
+                )
+            else:
+                issues.append(
+                    f"{msg}Compute each box's size with fit_font_size() (start at the "
+                    f"role ceiling, step down to fit, clamp at floor) or reduce content "
+                    f"so a larger size fits. Do not inflate fonts without checking fit."
+                )
+
+    # 19. Box under-fill — the inverse of overflow check #14: text rattling
+    #     around a much larger box at a size below the role ceiling means the
+    #     size was never computed upward. WARNING (a deliberately airy stat
+    #     callout can legitimately sit under 60%), surfaced for a decision.
+    for si12, slide12 in enumerate(prs.slides, start=1):
+        if slide12._element.get('show') == '0':
+            continue
+        lbl12 = f"Slide {si12}"
+        for s in slide12.shapes:
+            if s.is_placeholder or s.has_chart or s.has_table:
+                continue
+            if s.shape_type == 13 or not s.has_text_frame or s.left is None:
+                continue
+            shape_w, shape_h = s.width/IN, s.height/IN
+            if shape_h < 0.6:
+                continue   # labels/citations/slivers — not under-fill candidates
+            role, _fl = _role_floor(s.left/IN, s.top/IN, shape_w, shape_h)
+            if role != 'body':
+                continue
+            sizes = [r.font.size.pt for p in s.text_frame.paragraphs
+                     for r in p.runs if r.font.size is not None and r.text.strip()]
+            texts = [p.text for p in s.text_frame.paragraphs if p.text.strip()]
+            if not sizes or not texts:
+                continue
+            cur = max(sizes)
+            if cur >= 28:
+                continue   # already at the body ceiling
+            def _est_h(t, w_in, pt):   # self-contained, mirrors estimate_text_height
+                cpl = max(1, w_in * 72 / (pt * 0.55))
+                return math.ceil(len(t) / cpl) * pt * 1.4 / 72
+            est = sum(_est_h(t, shape_w, cur) for t in texts)
+            if est < shape_h * 0.6:
+                bigger = sum(_est_h(t, shape_w, cur + 2) for t in texts)
+                if bigger <= shape_h * 0.92:
+                    issues.append(
+                        f"WARNING: {lbl12} '{s.name}': box under-fill — ~{est:.1f}\" of text "
+                        f"in a {shape_h:.1f}\" box at {cur:.0f}pt, and {cur+2:.0f}pt would "
+                        f"still fit. Compute the size with fit_font_size() (largest in-role "
+                        f"size that fits), or shrink the box to its content."
+                    )
+
     return issues
 
 
@@ -1220,14 +1858,20 @@ Fix every reported issue before saving. Do not skip or suppress the check. Commo
 - **Chart fonts**: call `fix_chart_fonts(chart)` immediately after `add_chart()`
 - **Line legend**: set `chart.legend.position = XL_LEGEND_POSITION.RIGHT` and `include_in_layout = False`
 - **invertIfNegative**: add `<c:invertIfNegative val="0">` to each bar series element (see Bar Charts section above)
-- **Table style**: call `fix_table_style(table_shape)` to set the canonical safe GUID `{2D5ABB26-0587-4C30-8999-92F81FD0307C}` ("No Style, No Grid"). Never use the null GUID `{00000000-...}` — it crashes LibreOffice 26 on PPTX import.
+- **Table style**: call `fix_table_style(table_shape)` to set the canonical safe GUID `{2D5ABB26-0587-4C30-8999-92F81FD0307C}` ("No Style, No Grid"). Never use the null GUID `{00000000-...}`; it crashes LibreOffice 26 on PPTX import.
 - **Table fonts**: call `fix_table_fonts(table_shape)` after populating the table
-- **Text box fonts**: increase to `Pt(22)` (target) or at minimum `Pt(20)`; if text does not fit, reduce content or split the slide rather than reducing font size
+- **Text box fonts**: recompute the run's size with `fit_font_size()` toward the role's target (24-28pt for body) and clamp at the role floor (body 22pt); if text does not fit, reduce content or split the slide rather than reducing font size
 - **Conversion coverage**: reclassify image-only slides as hybrid (text column native + image column embedded), native shapes (colored boxes, flowcharts, box-and-arrow diagrams), or native charts (bar/line/scatter) per Step 2 decision rules
 - **Chart number format**: set `chart.value_axis.tick_labels.number_format` to the appropriate format string and set `number_format_is_linked = False`; cross-reference the source for data units
 - **Hanging indent**: call `set_hanging_indent(paragraph)` on every bullet paragraph to set proper `marL` and negative `indent`
 - **Below-target font (WARNING)**: try setting to `Pt(24)` first; if content overflows, reduce content (fewer bullets, shorter text, split slide); only drop to `Pt(22)` or `Pt(20)` after content is already minimal
 - **Text overflow**: reduce text content (shorten descriptions, remove items), increase box height (fewer items per slide = taller boxes), or change layout (switch from grid to bulleted list or table). Never ignore overflow; the rendered PPTX will clip or overlap
+- **Off-spec gray**: change the run's color to `RGBColor(0x4D, 0x4D, 0x4D)` (Charcoal). The check only fires on gray-toned colors (R≈G≈B) that are not in the approved palette grays, so near-Charcoal values like `#3A3A3A`, `#555555`, or `#333333` will be flagged. Colored accent runs (SlateNavy, DeepTeal, DustyPlum, etc.) are not affected
+- **UNIFORM-AT-FLOOR (generation)**: the floor was written as a default. Recompute every body box's size with `fit_font_size()` (start at the role ceiling, step down to fit, clamp at floor); where content is genuinely too dense for anything above the floor, reduce content. Never bump sizes without re-checking fit
+- **UNIFORM-AT-FLOOR (conversion warning)**: the Beamer source is uniformly small; report it to the user with the pointer to `slides.tex`. Do not silently inflate PPTX fonts to clear the warning
+- **Box under-fill (WARNING)**: compute the size with `fit_font_size()` and re-set the runs, or shrink the box to its content; a deliberately airy layout (hero stat, spacious card) can be accepted explicitly
+- **`<p:style>` conflict (PowerPoint repair warning)**: after `add_shape()`, find and remove the auto-added `<p:style>` element when you also set explicit `srgb` fill or line on the shape's `spPr`. `add_rounded_card()` does this automatically; if you wrote a custom autoshape helper, copy the `sp_el.find(qn('p:style'))` cleanup pattern from there
+- **`<a:buChar>` missing typeface (PowerPoint repair warning)**: use `set_bullet()`, which always emits a paired `<a:buFont typeface="Arial"/>` immediately before `<a:buChar/>`. Never write a custom bullet helper that only sets `<a:buChar>`
 
 ## Implementation Checklist
 
@@ -1236,15 +1880,15 @@ When generating slides, verify:
 **Layout:**
 - [ ] Title in placeholder, 36pt Calibri Bold, #4D4D4D (Charcoal); title is the key message
 - [ ] No subtitle added; no title slide generated
-- [ ] No key message boxes (no SlateNavy callout bar below the title)
+- [ ] Callout boxes present in the Beamer source (`\callout`) are recreated as editable filled text boxes (`add_rounded_card()` + a white text run), matching the source fill and white text, never rasterized; do not add callouts the source does not have
 - [ ] Content starts at `CONTENT_TOP = 1.95"`, never above the title bottom (1.826")
 - [ ] All shapes start at `CONTENT_LEFT = 1.10"` or further right
 - [ ] All shapes fill `CONTENT_W = 13.80"`; no narrower layouts that leave gaps on the right
-- [ ] Blank space at bottom for footer (nothing below `FOOTER_TOP = 7.70"`)
+- [ ] Body content stays above `CONTENT_BOTTOM = 8.00"`. Citation band is T=8.00 to 8.25. Footer placeholder begins at T=8.38.
 
 **Typography:**
-- [ ] Body text >= 20pt; no 18pt or smaller for slide content (18pt is hard floor for exceptional cases only)
-- [ ] Use largest font that fits attractively (default 22-24pt; 20pt when density requires; 18pt absolute last resort)
+- [ ] Every text element sized per the Role-Based Font Hierarchy: compute with `fit_font_size()`, then clamp at the role floor; never write a floor value as a default
+- [ ] Body text at the 24-28pt target, 22pt floor (body secondary floor 20pt); reduce content rather than dropping below a floor
 - [ ] Table cells: explicit font size set (never rely on inherited defaults)
 - [ ] Table cells: alignment explicitly set (never rely on inherited defaults)
 
@@ -1260,8 +1904,10 @@ When generating slides, verify:
 
 **Citations:**
 - [ ] Every `\sourcecite{}` in the Beamer source is reproduced as a citation text box in the PPTX
-- [ ] Citation text boxes are right-justified, positioned just above `FOOTER_TOP`
-- [ ] Citation formatting: 11pt Calibri Italic, MedGray (#B0AFA8)
+- [ ] Citation text boxes are at canonical position: `L=1.10", T=8.00", W=13.80", H=0.25"` (single-line)
+- [ ] Multi-line citations grow upward only: `T=7.75, H=0.50` for 2 lines; `T=7.50, H=0.75` for 3 lines. Bottom edge always at `T+H=8.25`, never inside the footer strip (which begins at `T=8.38`).
+- [ ] Citation formatting: 11pt Calibri **non-italic**, #B0AFA8, right-aligned
+- [ ] Multi-source citations use `; ` (semicolon space) between sources
 
 **Text structure:**
 - [ ] Related text (heading + bullets) is in ONE continuous text box, not split into separate boxes
@@ -1276,3 +1922,34 @@ When generating slides, verify:
 - [ ] No text overflow errors (estimated text height fits within shape height for every text box)
 - [ ] Below-target font warnings reviewed and addressed where possible
 - [ ] Grid layouts verified with `estimate_text_height()` on longest content before committing to layout
+
+## Rendering for Review
+
+When producing a review PDF of a saved PPTX (to inspect rendered slides, audit visually, or share for feedback), use **LibreOffice headless** as the export engine. PowerPoint is the documented fallback when LibreOffice misrenders. Never use Keynote.
+
+**Why LibreOffice over PowerPoint:** PowerPoint on macOS is sandboxed and cannot read files in `/private/tmp/...` or other restricted paths without a per-file "Grant File Access" prompt that the user must dismiss every time. LibreOffice runs headless with no GUI and no permission prompts. LibreOffice respects coded dimensions when Critical Rule 6 (`auto_size = MSO_AUTO_SIZE.NONE`) is applied, the same condition under which PowerPoint respects them.
+
+**Why not Keynote:** Keynote's PDF export applies its own auto-size to text frames on open, which silently resizes shapes that were coded with explicit dimensions. This produces cards with misaligned bottoms, overgrown callouts, and label positions that do not match the coded coordinates, even when the PPTX itself is correct.
+
+**Canonical render path:**
+
+```bash
+soffice --headless --convert-to pdf "/absolute/path/to/deck.pptx" --outdir "/absolute/path/to/outdir/"
+```
+
+The output PDF lands at `/absolute/path/to/outdir/deck.pdf`. The command exits cleanly when the conversion completes; no application window opens.
+
+Then render PNGs from the PDF with `pdftoppm -png -r 120 deck.pdf deck-slide`. The `-png` flag is required; without it, `pdftoppm` defaults to uncompressed PPM (about 6 MB per slide vs about 200 KB for PNG, and Claude's Read tool does not support PPM). At `-r 150` a standard 16:9 slide renders at 2000x1125, right at the 2000px per-image cap; slightly larger page sizes push PNGs to ~2080x1170 and trigger "image exceeds dimension limit" errors when read into context. `-r 120` yields 1600x900 (or ~1664x936 for wider pages), safely under the cap while remaining sharp enough for visual layout audits.
+
+**PowerPoint fallback.** If a LibreOffice export shows visual defects that the code says should not be there (rare; usually involves obscure chart features or font-substitution surprises), re-export via PowerPoint:
+
+```bash
+osascript -e 'tell application "Microsoft PowerPoint"
+    open POSIX file "/absolute/path/to/deck.pptx"
+    set theDoc to active presentation
+    save theDoc in POSIX file "/absolute/path/to/deck.pdf" as save as PDF
+    close theDoc saving no
+end tell'
+```
+
+PowerPoint cannot read `/private/tmp/...` without a permission prompt; copy the deck into the project folder (or `~/Library/Caches/`) before running the AppleScript fallback.

@@ -1,6 +1,6 @@
 # Beamer Slide Generator
 
-Generate production-quality LaTeX Beamer presentations from source content. The skill handles the complete workflow: audience triage, citation strategy decision, outline checkpoint with content inventory, code-first figure generation, `.tex` authoring, compilation, and a merged quality audit agent.
+Generate production-quality LaTeX Beamer presentations from source content. The skill handles the complete workflow: structure and register triage, citation strategy decision, outline checkpoint with content inventory, code-first figure generation, `.tex` authoring, compilation, and a merged quality audit agent.
 
 ---
 
@@ -16,14 +16,14 @@ A second problem is mechanism selection. When everything is a TikZ diagram, the 
 
 The skill follows a staged pipeline that separates planning from execution:
 
-1. **Audience triage:** match the request to a domain pattern (teaching, faculty, professional, consulting, or working) that defines rhetoric balance, slide count range, density level, and which optional elements (Devil's Advocate slides, transition slides, code blocks) to include.
+1. **Structure and register triage:** match the request to a domain pattern (`structure=`: mba [default], teaching, faculty, professional, consulting, or working) that defines rhetoric balance, slide count range, density level, and which optional elements (Devil's Advocate slides, transition slides, code blocks) to include; and resolve the language level (`register=`: business [default] translates the source's domain jargon for a non-specialist reader, technical keeps it).
 2. **Citation strategy decision:** state up front whether the deck is single-source (one paper or report drives 80 percent or more of slides; title-slide attribution, no per-slide citations) or multi-source (per-slide `\sourcecite{}` everywhere). Locks the strategy before slide writing so per-slide citations do not drift onto a single-source deck.
 3. **Outline checkpoint:** produce a complete slide sequence with assertion titles, a figure plan, a source content inventory (Render / Compress / Drop per major table or figure with a reason for each Compress and Drop), and a citation strategy recap before writing any `.tex` content. Wait for approval.
 4. **Code-first figure generation:** for any figures identified as needing matplotlib (per the decision matrix in `figure_generation.md`), write and run standalone Python scripts before authoring the `.tex` file. pgfplots figures are authored inline.
 5. **Figure extraction:** for figures that must be pulled from source PDFs, render, verify, and crop before writing any `.tex` content.
 6. **`.tex` authoring:** copy the preamble verbatim from the style guide's Quick Reference section. Apply the visual mechanism decision table. Compute TikZ box heights from source before writing overlay text (do not rely on post-compilation visual inspection).
 7. **Compilation cycle:** run `pdflatex` at least twice (required for `\sourcecite` overlay positioning). Fix all hbox/vbox warnings before proceeding.
-8. **Quality audit:** launch one audit agent (general-purpose, sonnet tier) that reads the style guide, the audit checklist, the compiled PDF, and the `.tex` source, then checks every slide against every checklist item including deck-level checks (citation strategy consolidation, Limitations format). Fix all findings and recompile.
+8. **Quality audit:** launch one audit agent (general-purpose, on a strong model) that reads the style guide, the audit checklist, the compiled PDF, and the `.tex` source, then checks every slide against every checklist item including deck-level checks (citation strategy consolidation, Limitations format). Fix all findings and recompile.
 9. **Deliverable placement:** copy `slides.pdf` to the parent folder as `<base_name>_slides.pdf`.
 
 ---
@@ -46,7 +46,7 @@ The skill follows a staged pipeline that separates planning from execution:
 
 **Why one merged audit agent:** The former pipeline ran three separate agents (deck evaluation, graphics verification, quality checklist). Each agent had to load the full PDF and `.tex` source into context independently. A single agent reads the same files once and applies all three audit domains in one pass, producing equivalent findings at lower token cost.
 
-**Why the audit runs on sonnet rather than opus:** The audit is rule application against a published checklist, not open-ended reasoning. Sonnet handles this reliably at a fraction of the cost. The escape hatch is to upgrade to opus only if a prior sonnet audit on the same deck produced obvious errors (a missed clear violation or an invented finding); in practice this is rare.
+**Why the audit runs on a strong model:** The audit is exhaustive rule application: scan every slide for every applicable pattern. Smaller models have been observed to spot-check rather than exhaustively apply, shipping defects the checklist had explicit rules for. A smaller tier is acceptable only for small decks (under 10 slides) with no TikZ boxes or charts.
 
 **Why the outline checkpoint requires a source content inventory:** The most common information-loss pattern in this skill is silently collapsing two information-dense tables (for example, a "rises" table and a "falls" table, each with per-row magnitudes) into one categorical slide that strips the magnitudes. Requiring an explicit Render / Compress / Drop decision per major table or figure at outline time, with a one-line reason for each Compress and Drop, makes that decision visible and reviewable before any `.tex` is written.
 
@@ -87,7 +87,7 @@ The two-pass minimum is non-negotiable for any deck using `\sourcecite{}`.
 **From within Claude Code:**
 
 ```
-beamer [content source] [audience=teaching|faculty|professional|consulting|working]
+beamer [content source] [structure=mba|teaching|faculty|professional|consulting|working] [register=business|technical]
 ```
 
 Provide one or more of:
@@ -95,7 +95,7 @@ Provide one or more of:
 - A `summary.md` file from a summarization workflow
 - Raw text or pasted content
 
-If no audience is specified, defaults to **teaching lecture** (Logos 45% / Ethos 15% / Pathos 40%, 10-18 slides).
+If no structure is specified, the skill defaults to **MBA / Executive** (Logos 50% / Ethos 25% / Pathos 25%, 8+ slides): the research-paper-to-slides skeleton that opens Title then Methodology then Summary and closes with Limitations, Conclusions, and Key Takeaways, each when appropriate. If no register is specified, it defaults to **business** (domain jargon translated or glossed for a non-specialist reader). The legacy `audience=` parameter still works as a deprecated alias for `structure=`.
 
 **Standalone invocation:** If invoked without source content, the skill asks what to build slides from.
 
@@ -105,7 +105,7 @@ If no audience is specified, defaults to **teaching lecture** (Logos 45% / Ethos
 
 Generating a deck is the default. The skill also works on a deck it produced earlier through three additional modes:
 
-- **Edit** (`mode=edit`, an edit/revise/fix trigger, or auto-detected when the working directory already contains a `*_build/slides.tex`): loads the existing source and context, presents a menu (edit, run the quality audit, or convert to PPTX), applies your changes, and runs the full compilation and audit cycle. If you report a visual defect, the skill reads the relevant slides, proposes a fix, and waits for approval before editing.
+- **Edit** (`mode=edit`, an edit/revise/fix trigger, or auto-detected when the working directory already contains a `*_build/slides.tex`): loads the existing source and context, presents a menu (edit, run the quality audit, or convert to PPTX), applies your changes, and runs the full compilation and audit cycle. If you report a visual defect, the skill reads the relevant slides, proposes a fix, and waits for approval before editing. Each delivered edit round is preserved as a numbered `vNN` version snapshot (PDF plus its paired `.tex`), so every version remains recoverable without Git.
 - **Audit** (`mode=audit` or an audit trigger): re-runs the quality audit against an already-compiled deck and applies fixes, without other content changes. Useful for revisiting a deck after a pause.
 - **PPTX** (`mode=pptx` or "convert to pptx"): converts the compiled PDF to a styled PowerPoint via the PPTX style guide workflow.
 
@@ -151,7 +151,7 @@ The audit checklist in `audit-checklist.md` covers all style guide compliance ch
 
 ## Installation
 
-1. Copy the entire `skills/beamer/` directory (which includes `SKILL.md`, `audit-checklist.md`, `domain_patterns.md`, and `figure_generation.md`) into `~/.claude/skills/beamer/`. All four files are needed; the audit checklist runs in the quality audit step, domain patterns drive audience triage, and figure generation guides matplotlib output.
+1. Copy the entire `skills/beamer/` directory (which includes `SKILL.md`, `audit-checklist.md`, `domain_patterns.md`, and `figure_generation.md`) into `~/.claude/skills/beamer/`. All four files are needed; the audit checklist runs in the quality audit step, domain patterns drive the structure triage, and figure generation guides matplotlib output.
 2. Install TeX Live (or MacTeX on macOS) so `pdflatex` is on your `PATH`. The skill checks for `pdflatex` at the start of every run and stops if it is missing. Install instructions for each OS are in `SKILL.md` Step 0.
 3. Copy `style-guides/beamer/style-guide.md` into the matching path on your system, or update the reference in `SKILL.md` to point at your own Beamer style guide.
 4. Restart Claude Code (or run `/skills` to reload).

@@ -1,16 +1,16 @@
 ---
 name: beamer
-description: Beamer slide generation with citation strategy decision, code-first matplotlib figures, outline checkpoint with content inventory, audience-aware rhetoric, Devil's Advocate slides, code blocks, and transition slides. Quality audit runs as a single agent at the sonnet tier. Beyond generate mode, it supports edit, audit, and convert-to-PPTX modes for working on a previously generated deck, including an optional PDF-vs-PPTX conversion audit. Edit mode auto-activates when the working directory contains a `*_build/slides.tex`. Adapted from Scott Cunningham's beautiful_deck approach.
+description: Beamer slide generation with citation strategy decision, code-first matplotlib figures, outline checkpoint with content inventory, structure-aware rhetoric, Devil's Advocate slides, code blocks, and transition slides. Two optional axes tune the deck: `structure=` (mba [default], teaching, faculty, professional, consulting, working) selects the slide skeleton and rhetoric balance; `register=` (business [default], technical) selects the language level, where business translates or glosses the source's domain jargon for a non-specialist reader and technical keeps the source vocabulary intact. `audience=` is a deprecated alias for `structure=`. Quality audit runs as a single agent on a strong model. Beyond generate mode, it supports edit, audit, and convert-to-PPTX modes for working on a previously generated deck, including a version snapshot of each delivered edit round and an optional PDF-vs-PPTX conversion audit. Edit mode auto-activates when the working directory contains a `*_build/slides.tex`. Adapted from Scott Cunningham's beautiful_deck approach.
 triggers: beamer, beamer slides, deck, edit beamer, revise beamer, fix beamer slides, audit beamer, convert beamer to pptx
 allowed-tools: Bash(pdflatex*), Bash(xelatex*), Bash(lualatex*), Bash(latexmk*), Bash(bibtex*), Bash(biber*), Bash(python*), Bash(pip*), Bash(pdftoppm*), Bash(cd*), Bash(mkdir*), Bash(ls*), Bash(cp*), Bash(mv*), Bash(rm*), Bash(which*), Bash(type*), Bash(kpsewhich*), Bash(tlmgr*), Bash(texhash*), Bash(mactex*), Bash(mktexlsr*), Bash(fmtutil*), Bash(updmap*), Bash(brew*), Bash(find*), Bash(system_profiler*), Bash(fc-list*), Bash(eval*), Bash(export*), Bash(cat*), Bash(grep*), Bash(head*), Bash(tail*), Bash(wc*), Read, Write, Edit, Glob, Grep, Agent
-argument-hint: [content-notes-or-summary] [audience=teaching|faculty|professional|consulting|working]
+argument-hint: [content-notes-or-summary] [structure=mba|teaching|faculty|professional|consulting|working] [register=business|technical]
 ---
 
 # Beamer Slide Generator
 
-Generate an original Beamer presentation from source content (structured notes, summaries, or raw material). This skill handles the full cycle: audience triage, outline checkpoint, code-first figure generation, design, authoring the `.tex` file, compilation, and verification through multi-agent review.
+Generate an original Beamer presentation from source content (structured notes, summaries, or raw material). This skill handles the full cycle: structure and register triage, outline checkpoint, code-first figure generation, design, authoring the `.tex` file, compilation, and verification through multi-agent review.
 
-Six additions from Scott Cunningham's beautiful_deck approach are integrated: code-first figures (matplotlib), an outline checkpoint, audience-aware rhetoric, Devil's Advocate slides, code blocks, and transition slides.
+Six additions from Scott Cunningham's beautiful_deck approach are integrated: code-first figures (matplotlib), an outline checkpoint, structure-aware rhetoric, Devil's Advocate slides, code blocks, and transition slides.
 
 Beyond generating a new deck, the skill also works on an existing one through three additional modes (edit, audit, and convert-to-PPTX); see Mode Selection below. Edit mode auto-activates when the current working directory already contains a `*_build/slides.tex`.
 
@@ -21,7 +21,7 @@ This skill expects one or more of:
 - A `summary.md` file with a structured summary
 - Raw content, pasted text, or other source material
 
-An optional `audience` parameter selects a domain pattern from `domain_patterns.md`: teaching (default), faculty, professional, consulting, or working. When omitted, defaults to teaching lecture.
+Two optional parameters tune the deck. `structure=` selects a domain pattern from `domain_patterns.md`: mba (the default), teaching, faculty, professional, consulting, or working. `register=` selects the language level: business (the default) translates or glosses the source's domain jargon for a non-specialist reader; technical keeps the source vocabulary intact. The legacy `audience=` parameter is accepted as a deprecated alias for `structure=` with the same value set.
 
 If invoked standalone, ask the user what content to build slides from. If invoked as part of a slides workflow, notes and summary files will already exist in the working subdirectory.
 
@@ -53,11 +53,11 @@ Default mode: **generate** (build a new deck from source content). This skill al
 | `audit` | `mode=audit` or audit trigger | Locate existing deck, load PDF and .tex, run Compilation Cycle Step 3 (Quality Audit) then Step 4 (Fix), report |
 | `pptx` | `mode=pptx` or "convert to pptx" trigger | Locate existing deck, run the Output PPTX conversion block |
 
-**In any non-generate mode:** skip everything from Step 0.1 through Figure Extraction (Step 0.1 Pre-flight Deliverable Check, Step 0.5 Audience Triage, Step 0.6 Citation Strategy, Step 0.7 Outline Checkpoint, Step 0.8 Code-First Figure Generation, Design Requirements, Content Requirements, Visual Mechanism Selection, Number Formatting, Acronyms and Abbreviations, Quality Standards, Figure Extraction). All of these are generate-time prep that does not apply to a previously generated deck. Jump from Step 0 (LaTeX verification) directly into the **Edit Mode** section below for the locate and load-context steps, then dispatch per the chosen mode. The Edit Mode E2 step is the entry-point backup counterpart to Step 0.1; running both would produce duplicate timestamped backups.
+**In any non-generate mode:** skip everything from Step 0.1 through Figure Extraction (Step 0.1 Pre-flight Deliverable Check, Step 0.5 Structure and Register Triage, Step 0.6 Citation Strategy, Step 0.7 Outline Checkpoint, Step 0.8 Code-First Figure Generation, Design Requirements, Content Requirements, Visual Mechanism Selection, Number Formatting, Acronyms and Abbreviations, Quality Standards, Figure Extraction). All of these are generate-time prep that does not apply to a previously generated deck. Jump from Step 0 (LaTeX verification) directly into the **Edit Mode** section below for the locate and load-context steps, then dispatch per the chosen mode. The Edit Mode E2 step is the entry-point backup counterpart to Step 0.1; running both would produce duplicate timestamped backups.
 
 **In generate mode:** proceed with every step as usual. There is no behavior change for workflows that call this skill in generate mode.
 
-**`audience=` in non-generate modes:** the `audience=` parameter only takes effect in generate mode (via Step 0.5 Audience Triage). In edit, audit, or pptx mode, `audience=` is silently ignored; the deck's audience-specific structure was set at generate time and is not reconfigurable mid-flight. To use a different audience template, regenerate the deck from scratch with `mode=generate`.
+**`structure=` and `register=` in non-generate modes:** both parameters only take effect in generate mode (via Step 0.5 Structure and Register Triage). In edit, audit, or pptx mode, both are silently ignored; the deck's structure and register were set at generate time and are not reconfigurable mid-flight. To use a different structure, regenerate the deck from scratch with `mode=generate`. (`audience=` is the deprecated alias for `structure=` and is ignored here too.)
 
 **Auto-detection ambiguity:** if the CWD contains multiple `*_build/slides.tex` subdirectories, auto-detection still fires (edit mode is chosen), and Step E1 below prompts the user to pick which deck.
 
@@ -81,18 +81,26 @@ The base directory is **the current working directory** at the time the skill is
 
 **Validation:** confirm that `slides.tex` exists in the build subdirectory. If it does not, report the error and stop.
 
-### E2: Pre-flight Deliverable Check (entry-point backup)
+### E2: Pre-flight Deliverable Check (entry-point version snapshot)
 
-Before loading context or applying any edits, check for existing deliverable files that would be overwritten in this session:
+Before loading context or applying any edits, preserve the deck being edited as a version snapshot. This start-of-round capture fires here at entry and again at each E8 loop-back (once per edit round).
 
-1. Use Glob in the **output subdirectory** to find `<content_name>_slides.pdf` and `<content_name>.pptx`.
-2. Use Glob in the **build subdirectory** to find `slides.pdf` and `slides_tmp.pdf`.
+1. **Version-snapshot the deck.** The deck about to be edited is the current compiled deck `<build>/slides.pdf`, paired with its source `<build>/slides.tex`. If it exists, preserve it as the next milestone:
+   - Glob existing `<content_name>_slides v*.pdf` in the **output subdirectory**. Next N = highest existing `vNN` + 1, zero-padded to two digits; if none exist, N = `01`. Generation writes no `vNN`, so the first edit creates `v01`, the backup of the generated deck.
+   - Snapshot suffix:
+     - **`v01` (no prior `vNN`):** the deck being preserved is the generated baseline. Suffix = `v01 structure-<x> register-<y>`, where `<x>`/`<y>` are the structure and register the deck was generated with, read from the deck's generate-time entry in the project session log (`CLAUDE.local.md` if you keep one). If no record exists, use `structure-mba register-business` and say so in the report.
+     - **`v02`+:** suffix = `v0N <label>`, a 1-3 word descriptor of the change that defined the version being preserved. For an in-conversation E8 loop-back, derive the label from the edits just applied in that round.
+   - Copy the PDF: `cp "<build>/slides.pdf" "<output>/<content_name>_slides <suffix>.pdf"`. (Fallback: if `<build>/slides.pdf` is absent but the output deliverable exists, copy `<output>/<content_name>_slides.pdf`.)
+   - Copy its source, paired: `cp "<build>/slides.tex" "<build>/slides <suffix>.tex"`, so the version recompiles and diffs, not only views. The `.tex` must be taken now, before this round's edits overwrite it in place.
+2. **Version-snapshot the PPTX** (if present), per Output's "PPTX version snapshots (`vNN`)": if `<content_name>.pptx` exists and is not already byte-identical to the newest `<content_name> v*.pptx` (`cmp -s`), snapshot it as the next `vNN`. If it is already preserved as the latest `vNN`, do nothing.
 
-If any of these already exist, create timestamped backups (`cp "<file>" "<file_without_ext> YYYY-MM-DD-HHMMSS.<ext>"`) before proceeding, and report: "Backed up existing deliverables: [list]"
+Report: "Snapshotted the deck being edited as `<content_name>_slides <suffix>.pdf` (+ source `slides <suffix>.tex`)."
 
-This is the entry-point counterpart to Step 0.1 (which covers generate mode). The Compilation Cycle and Output backup-before-overwrite rules then cover every subsequent overwrite within the session, including between audit-fix iteration rounds.
+One snapshot per edit **round** (one batch of changes the user reviews): here at entry, and again at each E8 loop-back. Intra-round audit-fix recompiles do not snapshot. This is the safety net: every delivered version is preserved before the next round overwrites it.
 
-If none exist, proceed silently.
+Convention recap: `<content_name>_slides.pdf` is always the latest; the `vNN` files are the preserved version history beneath it, each paired with its `slides vNN ....tex` source in `_build/`. `v01` is the backup of the generated deck (made at the first edit), tagged with the deck's structure and register; later versions carry change-labels. After N edit rounds there are N `vNN` files; a count short of the rounds applied means a snapshot was skipped.
+
+If no deck exists yet (no `<build>/slides.pdf` and no deliverable), proceed silently.
 
 ### E3: Load Context
 
@@ -167,7 +175,7 @@ After edits are written, proceed to Compilation Cycle Step 1.
 After Compilation Cycle Step 4 completes in edit mode, before proceeding to Output, ask:
 > "Edits applied and recompiled. Would you like to make further changes, or are you done?"
 
-- If the user requests more edits: loop back to E5 (or E6 if a specific problem is reported).
+- If the user requests more edits (or an audit, or any further change to the deck): this is a new edit round. **First re-run the E2 version-snapshot step** to preserve the round just reviewed as the next `vNN` (PDF + paired `.tex`), then loop back to E5 (or E6 if a specific problem is reported). Re-firing the snapshot here, once per round, is the load-bearing rule: skipping it is the version-snapshot miss this guards against.
 - If the user is done: proceed to Output and stop after the deliverable PDF copy.
 
 **Do not raise PPTX in this prompt.** PPTX is offered at most once, at the end of the turn that first delivers the deck, and is never re-asked across edit iterations or later turns. If the user wants PowerPoint, they will ask ("pptx this deck") or pass `mode=pptx`, which routes to the Output PPTX conversion block at any time.
@@ -233,29 +241,41 @@ If no deliverables exist, proceed silently.
 
 **This step is non-negotiable.** Overwriting a deliverable without backup destroys work from previous sessions that may not be recoverable.
 
+**Version snapshots (`vNN`) are an edit-mode behavior** (Edit Mode E2 entry and each E8 loop-back, one per edit round), not generate mode. Generation writes no `vNN`; it uses the timestamped backup above and creates only `<base_name>_slides.pdf`. The first `vNN` is created at the first edit, as the backup of the generated deck (`v01`).
+
 ---
 
-## Step 0.5: Audience Triage
+## Step 0.5: Structure and Register Triage
 
-Read `domain_patterns.md` (in this skill's directory).
+This step resolves two independent axes and reports both.
 
-If the user specified an `audience` parameter, load the matching pattern:
-- `teaching` or `lecture` maps to **Teaching Lecture**
-- `faculty` maps to **Faculty Development**
-- `professional` maps to **Professional Audience**
-- `consulting` or `workshop` maps to **Consulting Workshop**
-- `working` maps to **Working Deck**
+**Structure axis (`structure=`, the deck shape).**
 
-If no audience was specified, default to **Teaching Lecture**.
+1. Resolve the structure value:
+   - No `structure=` and no `audience=`: `mba` (the default).
+   - `structure=mba`, or the deprecated aliases `academic` / `default`, or `audience=` naming any of those: `mba`.
+   - `structure=<value>` or `audience=<value>` naming `teaching`, `faculty`, `professional`, `consulting`, or `working`: that structure. (`audience=` is the deprecated alias for `structure=`; same value set.)
+   - Any unrecognized value: fall through to `mba`. This preserves callers that pass level words such as `Executive MBA` or `undergraduate`; those are not structural tokens and resolve to the default.
+2. Read `domain_patterns.md` (in this skill's directory) and load the resolved structure's entry:
+   - `mba` (and aliases / unrecognized values) maps to **MBA / Executive (default)**
+   - `teaching` or `lecture` maps to **Teaching Lecture**
+   - `faculty` maps to **Faculty Development**
+   - `professional` maps to **Professional Audience**
+   - `consulting` or `workshop` maps to **Consulting Workshop**
+   - `working` maps to **Working Deck**
+3. Apply that entry's structural template, rhetoric balance (logos/ethos/pathos), slide-count range, density, Devil's Advocate inclusion, code block inclusion, and transition slide inclusion throughout all subsequent steps.
 
-Report to the user which pattern is active:
+**Register axis (`register=`, the language level).**
 
-> "Audience: [pattern name]. [One-line summary of rhetoric balance and slide count range from domain_patterns.md]."
+4. Resolve the register value: no `register=` resolves to `business` (the default); `register=technical` resolves to technical. Record it; it governs the domain-translation rule and the audit checklist's Content Quality #14.
+   - `register=business` (default): the reader is a business or executive audience, not a specialist in the source's field. Translate or gloss every domain term on first use, state each chart's metric and baseline in the audience's words, and keep a translated term consistent across the deck. Content Quality #14 (the register and translation scan) is enforced at audit time.
+   - `register=technical`: the reader is a specialist; keep the source's domain vocabulary. The translation rule and Content Quality #14 are suppressed.
 
-For example:
-> "Audience: Teaching Lecture. Logos 45% / Ethos 15% / Pathos 40%, targeting 10-18 slides."
+Structure and register are separate axes. The default deck pairs an academic-shaped structure (`mba`) with a business register; the academic structure does not imply a technical register. A scholarly, keep-the-jargon deck is `register=technical` on whatever structure.
 
-Apply the audience-specific guidelines from the matched pattern throughout all subsequent steps: structural template, rhetoric balance, density, Devil's Advocate inclusion, code block inclusion, and transition slide inclusion.
+5. Report to the user which pattern is active:
+
+> "Structure: [entry name] (from invocation, or default `mba`). Register: [business|technical]. [One-line summary of rhetoric balance and slide count range from domain_patterns.md]."
 
 ---
 
@@ -281,11 +301,11 @@ This is a generation-time decision, not a post-hoc audit catch. Get it right bef
 1. `../writing-voice-guide/README.md` (or equivalent) -- guidance on creating a writing voice layer; slide-specific tone rules (factual titles, no over-narration, no selling the session, takeaway discipline)
 2. `../../style-guides/beamer/style-guide.md` -- visual design: colors, fonts, templates, macros, chart styling, TikZ patterns, table formatting, slide type patterns, and the complete LaTeX preamble to copy verbatim from its Quick Reference section
 3. `audit-checklist.md` (in this skill's directory) -- the quality audit checklist used in Step 3
-4. `domain_patterns.md` (in this skill's directory) -- audience-specific guidelines for the active pattern
+4. `domain_patterns.md` (in this skill's directory) -- structure-specific guidelines for the active entry
 
 Do not write any `.tex` content before completing all four reads. Do not reconstruct the preamble from memory. The style guide is the single source of truth for visual design. Do not deviate from its color definitions, font settings, or template configurations.
 
-Apply the audience-specific guidelines from the matched domain pattern throughout generation: structural template, rhetoric balance (logos/ethos/pathos), slide count range, density level, Devil's Advocate inclusion, code block inclusion, and transition slide inclusion.
+Apply the structure-specific guidelines from the matched domain pattern throughout generation: structural template, rhetoric balance (logos/ethos/pathos), slide count range, density level, Devil's Advocate inclusion, code block inclusion, and transition slide inclusion. Apply the register (Step 0.5) to all slide language: under `register=business`, translate or gloss the source's domain terms; under `register=technical`, keep them.
 
 ---
 
@@ -293,7 +313,7 @@ Apply the audience-specific guidelines from the matched domain pattern throughou
 
 **This checkpoint is mandatory.** Write a brief outline and present it to the user before proceeding. The outline must include:
 
-1. **Audience and rhetoric balance:** The active domain pattern name and its logos/ethos/pathos percentages.
+1. **Structure, register, and rhetoric balance:** The active structure entry name, the register (business or technical), and the structure's logos/ethos/pathos percentages.
 2. **Slide sequence with assertion titles:** One line per slide showing the slide number, assertion title, and slide type (for example: title, hook, finding, chart, table, diagram, code, Devil's Advocate, transition, takeaway, closing). Follow the structural template from the active domain pattern.
 3. **Figure plan:** For each planned figure, indicate whether it will be:
    - **pgfplots** (inline in .tex)
@@ -304,9 +324,9 @@ Apply the audience-specific guidelines from the matched domain pattern throughou
    Reference the decision matrix in `figure_generation.md` to determine which path each figure takes. Default to pgfplots; use matplotlib only when the figure exceeds pgfplots' comfortable range per the matrix.
 4. **Devil's Advocate slide:** Whether included or omitted, and why (per the active domain pattern's rules).
 5. **Source content inventory:** Enumerate every major table and figure cataloged in `notes.md` (or the source's text extract). For each item, decide one of three handlings and record a one-line reason:
-   - **Render** — produce a slide that includes the magnitudes (numeric values, percentage points, coefficients). The reader sees the source's quantitative content.
+   - **Render**: produce a slide that includes the magnitudes (numeric values, percentage points, coefficients). The reader sees the source's quantitative content.
    - **Compress** (high bar; default is Render). Fold into a parent slide as a categorical or summarized treatment, deliberately dropping some magnitudes. Eligible only when another already-Rendered slide carries the same magnitude pattern. Two distinct findings (different magnitudes, different countries, different mechanisms, or different time periods) get two distinct slides; folding them into one is a defect, not an optimization. Reason must be specific (for example, "the magnitude pattern is shown in Figure X already" or "audience does not need per-site detail"). Forbidden patterns: folding findings about different countries with different magnitudes into one card-set slide; folding sector, location, occupation, and other mechanism findings into a single "no single pathway" slide when each has a distinct mechanism; folding a country exception into a parent slide as a footer when the exception itself has a distinct magnitude or mechanism.
-   - **Drop** — omit entirely. Reason must be specific (for example, "robustness check that does not change the main finding" or "appendix-level methodological detail").
+   - **Drop**: omit entirely. Reason must be specific (for example, "robustness check that does not change the main finding" or "appendix-level methodological detail").
 
    Report a single inventory line such as: "Source content inventory: N tables/figures cataloged. M rendered, K compressed, L dropped." Then list each Compress and Drop decision with its one-line reason. Render decisions do not need individual reasons. The most common information-loss pattern in this skill is silently collapsing two information-dense tables (for example, a "rises" table and a "falls" table, each with per-row magnitudes) into one categorical slide that strips the magnitudes. Make these decisions explicit at outline time, not implicitly during slide writing. If a Compress or Drop reason reads as "for brevity" or "to fit the slide count," reconsider whether the content should be preserved as its own slide.
 
@@ -399,7 +419,7 @@ When the deck includes a methodology slide (typically for empirical studies, res
 
 **Column balance after drops.** If dropping elements leaves one column with fewer than 2 elements, rebalance: move Outcomes to the left column, or collapse to a single-column layout. Do not ship a methodology slide with one column at near-capacity and the other near-empty.
 
-**Sanity check.** A reader who finishes the slide should be able to predict the shape of the findings slides that follow. If they can't, an element is missing — restore one of the dropped elements, or rewrite an existing phrase to carry more weight.
+**Sanity check.** A reader who finishes the slide should be able to predict the shape of the findings slides that follow. If they can't, an element is missing: restore one of the dropped elements, or rewrite an existing phrase to carry more weight.
 
 ### Limitations Slide Template
 
@@ -413,8 +433,9 @@ When the source material has an **Issues section** with substantive limitations,
 
 Each item gets its own card or block. Visual treatment: 2-3 colored cards side-by-side or stacked, with bolded section labels (e.g., `\textbf{\color{DeepTeal}Concern:}`, `\textbf{\color{SlateNavy}Why reasonable:}`, `\textbf{\color{DeepTeal}Response:}`). Loose prose paragraphs without the three-part labels are a defect: the three-part format reads as a Devil's Advocate exchange, which is the pedagogical pattern this slide is designed for; loose prose loses that affordance.
 
-**Audience-pattern modifiers.** The active domain pattern determines whether this slide is required, optional, or omitted:
+**Structure modifiers.** The active domain pattern determines whether this slide is required, optional, or omitted:
 
+- **MBA / Executive (default):** Include when the source has substantive limitations; an academic source almost always does.
 - **Teaching Lecture:** Include when the source has an Issues section.
 - **Faculty Development:** Include (faculty audiences are skeptical by nature).
 - **Professional Audience:** Optional (depends on whether the talk makes a claim or reports findings).
@@ -701,7 +722,7 @@ The audit agent must perform these specific source-level scans on `slides.tex` a
 
 3. **TikZ box height vs content height.** For every TikZ node using the empty-box-plus-overlay pattern, extract the box `minimum_height` and compute the total content height per the procedure in the style guide. Verify `total_content_height < minimum_height - top_shift`. Every violation is a defect per `audit-checklist.md` Content Quality #10. Fix by shortening the content or increasing the box height uniformly across sibling cards. **For sibling node groups:** identify every group of sibling TikZ nodes (multiple nodes positioned in a row or grid with the same style) and report the entire group when any one node fails, not just the offending node. Non-uniform expansion is the visible defect, so the fix must apply to all siblings.
 
-4. **Facilitator prompts outside teaching/lecture audiences.** When the active audience pattern is faculty, professional, consulting, or working, grep `slides.tex` for `\textit{Discuss:`, `\textit{Activity:`, `\textit{Reflect:`, `\textit{Think about:`, `\textit{Ask the room:`, and similar facilitator-prompt patterns. Every match is a defect per `audit-checklist.md` Deck-Level Checks #4. Skip this grep entirely when the active audience is teaching or lecture.
+4. **Facilitator prompts outside teaching/lecture structures.** When the active structure is mba, faculty, professional, consulting, or working, grep `slides.tex` for `\textit{Discuss:`, `\textit{Activity:`, `\textit{Reflect:`, `\textit{Think about:`, `\textit{Ask the room:`, and similar facilitator-prompt patterns. Every match is a defect per `audit-checklist.md` Deck-Level Checks #4. Skip this grep entirely when the active structure is teaching or lecture.
 
 5. **`\addlegendentry` math tokens.** Grep `slides.tex` for `\addlegendentry{[^}]*\$`. Every match is a defect: math symbols inside `\addlegendentry{...}` must be wrapped with `\ensuremath{token}`, never with `$token$`. Math-mode dollars inside legend labels corrupt pgfplots state when the legend has 2+ entries and another frame follows, producing a fatal `Missing control sequence inserted / \inaccessible` error attributed to the wrong frame's `\end{frame}` (off-by-one). Fix by replacing every `$math$` inside `\addlegendentry` with `\ensuremath{math}`.
 
@@ -742,6 +763,7 @@ The agent checks every slide against every item in the audit checklist, covering
 - Deck-level Limitations format (each card or item follows the three-part structure: what a skeptic would say, why the concern is reasonable, how it is addressed)
 - Deck-level facilitator-prompt placement (only on teaching/lecture decks; Deck-Level Checks #4)
 - Deck-level Compress decision audit (each Compress is content-tested, not count-tested; Deck-Level Checks #5)
+- Register and domain translation (Content Quality #14): when `register=business` (the default), flag untranslated domain terms on first use, charts that do not state their metric and baseline in the audience's words, and a translated term that drifts across the deck. Skip this scan entirely when `register=technical`.
 
 The agent returns a structured report.
 
@@ -830,7 +852,10 @@ After successful compilation, always copy `slides.pdf` from the build directory 
 
 1. Take the build directory name (for example, `ai-energy-detailed-slides_build`)
 2. Strip the `_build` suffix to get the base name (for example, `ai-energy-detailed-slides`)
-3. Copy as `<base_name>_slides.pdf` into the parent folder
+3. **Backup before overwrite (mode-aware).** No `<base_name>_slides.pdf` is overwritten without the version being replaced first preserved.
+   - **Generate mode:** before copying, if `<base_name>_slides.pdf` already exists in the parent folder, timestamp-copy it as `<base_name>_slides YYYY-MM-DD-HHMMSS.pdf` before overwriting. This fires on **every** copy in the session (entry via Step 0.1, each audit-fix round, and final delivery), so no deliverable is overwritten without a recoverable prior version. An audit-fix cycle is a major change, not a minor edit.
+   - **Edit / audit / pptx modes:** the deck was preserved as `vNN` milestones at round starts (E2 entry and each E8 loop-back), so the version being overwritten here is already recoverable as a `vNN`; do not additionally timestamp the deck, just overwrite `<base_name>_slides.pdf` with the latest. Insurance guard: if no `vNN` exists for this deck (no round-start capture ran this session), timestamp-copy the existing deliverable before overwriting.
+4. Copy `slides.pdf` from the build folder as `<base_name>_slides.pdf` into the parent folder
 
 This applies to all invocations (standalone and called by workflows). When a calling workflow provides an explicit content name that differs from the build directory base name, the calling workflow's name takes precedence.
 
@@ -846,9 +871,23 @@ my_project/                              <-- parent folder
     scripts/
 ```
 
-**Confirm with the user:** "Beamer slides compiled and verified. Deliverable saved as `<base_name>_slides.pdf`. Ready to convert to PowerPoint?" (if part of a slides workflow) or "Beamer slides complete. Deliverable saved as `<base_name>_slides.pdf`." (if standalone).
+**Confirm with the user; the report format depends on the active mode:**
 
-**PPTX conversion:** When converting to PowerPoint, follow the Beamer-to-PPTX Conversion Workflow in `../../style-guides/pptx/style-guide.md` exactly. This includes reading the .tex source and PDF, creating a per-slide conversion plan with native/hybrid/image categorization, presenting the plan for approval, using all font size specifications (18pt body floor, 14pt table/chart floor), calling the quality check function before saving, and fixing all reported issues before the file is written. Do not write ad-hoc conversion code that bypasses this workflow.
+- **Generate mode (invoked from a slides workflow):** "Beamer slides compiled and verified. Deliverable saved as `<base_name>_slides.pdf`." Do not offer PPTX here; the calling workflow owns the single end-of-turn PPTX offer, so offering again would double-ask.
+- **Generate mode (standalone):** "Beamer slides complete. Deliverable saved as `<base_name>_slides.pdf`. If you want a PowerPoint version, say so (or `pptx this deck`); I will not ask again." Make this single offer once, at the end of the turn that produces the deck, and never re-raise it.
+- **Edit / audit / pptx modes:** list every deliverable that exists in the output subdirectory (`<content_name>_slides.pdf`; `<content_name>.pptx` only if it was generated this session or already exists), point the user to the build folder for working files, and close with "Would you like to adjust anything else?"
+
+**PPTX is offered at most once per deck, and never re-asked.** The single offer happens at the end of the turn that first delivers a newly generated deck (standalone generate mode above, or the calling workflow's own offer). Do not re-offer PPTX in the edit-mode iteration prompt (E8), in audit or pptx modes, in later edit turns, or in the session log. An unconverted deck is complete, not pending. If the user wants PowerPoint at any point, they request it explicitly ("pptx this deck" or `mode=pptx`).
+
+### PPTX version snapshots (`vNN`)
+
+The PPTX deliverable is version-snapshotted on the same `vNN` convention as the deck PDF, as its own independent series. `<base_name>.pptx` is always the latest; `<base_name> vNN <label>.pptx` are its preserved history. A PPTX `vNN` has no paired source file: the recompilable source for any PPTX version is the `.tex`/PDF `vNN` of the deck it was built from.
+
+- **Number:** glob the output folder for `<base_name> v*.pptx`; next N = highest existing `vNN` + 1, zero-padded to two digits, `v01` if none. This is the PPTX's own counter, independent of the PDF's, because the PPTX is overwritten per conversion, not per `.tex` edit round.
+- **Label:** `v01` = `structure-<x> register-<y>` (the deck's generate-time structure and register); `v02`+ = a 1-3 word descriptor of the change that defined the version being preserved (reuse the deck-change label from the round that produced it, or a brief `reconvert` tag).
+- **When it fires:** before any overwrite of `<base_name>.pptx` (a re-conversion, or applying conversion-audit fixes), preserve the existing `<base_name>.pptx` as the next `vNN`. Idempotency guard: if the existing `<base_name>.pptx` is already byte-identical to the newest `<base_name> v*.pptx` (`cmp -s` matches), do not mint a duplicate; just overwrite. The Edit Mode E2 entry check applies this same guard, so an unchanged PPTX does not spawn identical milestones across edit rounds.
+
+**PPTX conversion:** When converting to PowerPoint, follow the Beamer-to-PPTX Conversion Workflow in `../../style-guides/pptx/style-guide.md` exactly. This includes reading the .tex source and PDF, creating a per-slide conversion plan with native/hybrid/image categorization, presenting the plan for approval, using all font size specifications (22pt body floor with role-based floors for citations and labels, 14pt table/chart floor), calling the quality check function before saving, and fixing all reported issues before the file is written. Do not write ad-hoc conversion code that bypasses this workflow.
 
 ### PDF-vs-PPTX Conversion Audit (optional, offered after every PPTX conversion)
 
@@ -893,7 +932,7 @@ If the user picks `yes`:
 
    > "How would you like to handle these? Apply all fixes, pick per-finding (list numbers), or skip and accept the current PPTX as-is?"
 
-   - **Apply all:** re-run the PPTX conversion workflow with the findings list as input, or apply scoped text and cell edits directly via `python-pptx`. Back up the prior PPTX with a timestamp before re-saving.
+   - **Apply all:** re-run the PPTX conversion workflow with the findings list as input, or apply scoped text and cell edits directly via `python-pptx`. Preserve the prior PPTX as its next `vNN` (per "PPTX version snapshots" above) before re-saving.
    - **Per-finding:** prompt the user for the comma-separated numbers; apply only those.
    - **Skip:** report "Accepted PPTX as-is" and proceed to the Session Log.
 
@@ -912,10 +951,12 @@ After the deliverable is confirmed (and after optional PPTX conversion), append 
 ## [YYYY-MM-DD] - Beamer slides: [topic/description]
 - **Skill:** beamer
 - **Files created/modified:** [build directory path, slides.pdf deliverable path, PPTX if generated]
-- **Key decisions:** [source content used, slide count, audience pattern, any notable design choices]
+- **Key decisions:** [source content used, slide count, structure and register (for example, `structure=mba register=business`), any notable design choices]
 - **Status:** complete
 - **Next steps:** [none, or note if user mentioned future edits]
 ```
+
+**PPTX is not a tracked deliverable.** Do not record PPTX conversion as pending, deferred, or "offered, not yet run" in the session log, and do not carry it into a handoff's next steps. An unconverted deck is complete. PPTX is produced only on an explicit user request; per the standing rule above, the single offer happens at delivery and is never re-asked.
 
 **Handoff trigger:** If this session involved troubleshooting (Step 4 Fix and Recompile was used, or multiple compilation rounds were needed), ask:
 

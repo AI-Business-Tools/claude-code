@@ -9,7 +9,7 @@ New to this repository? Work through it in order:
 1. **[Get started](getting-started/).** What Claude Code adds beyond Claude chat and Cowork, how to install it on Mac or Windows, and how to set up your first project.
 2. **[Set up version history](skills/git-sync/).** Put your Claude Code environment under Git and sync two machines through a private GitHub repository, so every change to your skills and standards is tracked and reversible.
 3. **[Adopt handoffs and resume](skills/handoff-resume/).** End each session with a structured summary so the next one picks up where you left off.
-4. **[Browse the skills](skills/).** Reusable workflows for slides, documents, analysis, and knowledge management.
+4. **[Browse the skills](skills/).** Reusable workflows for slides, documents, analysis, and knowledge management. For a worked example of skills chained into one pipeline, see [From Academic Paper to Slides](getting-started/paper-to-slides.md).
 
 ## About
 

@@ -95,6 +95,8 @@ For business and knowledge work, skills are most useful for tasks you repeat: a 
 
 The skills in this repository are working examples you can read for ideas or adopt directly. Browse the [skills catalog](../skills/) to see how they are built. A few that need no coding background to use: [writing-voice-guide](../skills/writing-voice-guide/) (teach Claude to write in your voice), [summary-general](../skills/summary-general/) (turn an article, video, or podcast into a clean summary), and [ai-council](../skills/ai-council/) (pressure-test a decision through five distinct advisors).
 
+For a worked example of skills chained into a full pipeline, see [From Academic Paper to Slides](paper-to-slides.md): one request that reads a paper, summarizes it, and builds a compiled slide deck.
+
 ## Let Claude Code set you up
 
 Once Claude Code is installed, you do not have to do the rest by hand. Open Claude Code in a folder, point it at this repository (clone it, or give Claude the file's web address), and say something like:
@@ -107,6 +109,7 @@ Claude Code can create the project folder, draft a starting CLAUDE.md from your 
 
 - [CLAUDE-template](../CLAUDE-template/CLAUDE.md): a starting CLAUDE.md to copy and customize.
 - [project-patterns.md](project-patterns.md): optional, fuller folder and naming patterns with sample files.
+- [From Academic Paper to Slides](paper-to-slides.md): a worked end-to-end pipeline, from a PDF to a compiled deck.
 - [Skills catalog](../skills/): every skill in this repository, grouped by purpose.
 - [methodology.md](../methodology.md): the design thinking behind a structured AI environment.
 - [Style guides](../style-guides/): formatting conventions for slides and documents.

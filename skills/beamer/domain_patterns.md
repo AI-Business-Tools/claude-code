@@ -1,6 +1,8 @@
 # Domain-Specific Deck Patterns
 
-Audience-specific structural templates for the beamer skill. Each pattern specifies slide count range, density guidelines, rhetoric balance (logos/ethos/pathos), whether to include a Devil's Advocate slide, structural template, and audience-specific rules.
+Structural templates for the beamer skill, selected by the `structure=` parameter. Each pattern specifies slide count range, density guidelines, rhetoric balance (logos/ethos/pathos), whether to include a Devil's Advocate slide, structural template, and structure-specific rules.
+
+**Default structure: `mba`.** When no `structure=` is passed, the skill loads the MBA / Executive entry below. The legacy `audience=` parameter is a deprecated alias for `structure=` (same value set), and `academic` and `default` are deprecated aliases for `mba`. Unrecognized values fall through to `mba`.
 
 ---
 
@@ -14,7 +16,8 @@ The logos/ethos/pathos percentages do not allocate slides to categories. They co
 
 | Context | Logos | Ethos | Pathos | Slides |
 |---|---|---|---|---|
-| **Business school teaching** (default) | 45% | 15% | 40% | 10-18 |
+| **MBA / Executive** (default) | 50% | 25% | 25% | 8+ |
+| **Business school teaching** | 45% | 15% | 40% | 10-18 |
 | **Faculty development** | 35% | 35% | 30% | 12-20 |
 | **Professional audience** | 40% | 25% | 35% | 10-15 |
 | **Consulting workshop** | 30% | 25% | 45% | 8-15 |
@@ -22,9 +25,39 @@ The logos/ethos/pathos percentages do not allocate slides to categories. They co
 
 ---
 
-## Business School Teaching (Default)
+## MBA / Executive (default)
 
-**Primary examples:** undergraduate business courses, MBA electives and cores, Executive MBA, and executive education. Default pattern when no audience is specified. Covers all flavors of business education.
+**Default structure: `mba`.** This is what the skill loads when no `structure=` is passed (and for the deprecated aliases `academic` and `default`). It is the research-paper-to-slides skeleton: turn a paper, report, or study into an evidence-forward deck for a business or executive reader. To make a different structure the default, repoint the "Default structure" marker in the intro above and in Step 0.5 of `SKILL.md`; nothing else needs to move.
+
+Register defaults to `business` here, as everywhere: translate or gloss the source's domain vocabulary for a non-specialist reader (Step 0.5 register axis in `SKILL.md`). The structure is academic in shape; the register is not. Structure and register are separate axes, and this default pairs an academic structure with a business register. A keep-the-jargon deck for a specialist room is `register=technical` on this or any structure.
+
+**Rhetoric balance: 50% logos / 25% ethos / 25% pathos.** Logos-forward: the findings and the evidence drive the deck. Ethos is meaningful because the skeleton puts Methodology and Limitations on their own slides (process and candor shown). Pathos is moderate, carried by the Application/implications slide (why the reader should care).
+
+### Structural skeleton (8+ slides; one slide per distinct finding, no hard cap)
+
+1. **Title slide** (dark accent, SlateNavy)
+2. **Methodology slide, when appropriate** (titled to match the source, for example "Population and Methodology"). This is the first slide after the title; do not insert a hook, agenda, or definition slide ahead of it. **Skip when the source is not an empirical study, when the methodology is trivial or beside the point, or when the source is opinion/news/blog content.** Use judgment. **Structure: follow the Methodology Slide Template in `SKILL.md` Content Requirements** (two-column, seven-element layout with DeepTeal bold labels). The template's structure is itself the visual treatment; do not substitute a free-form flow diagram or single-column bullet list.
+3. **Summary slide, when appropriate**, titled "Summary". A preview-style slide that summarizes the conclusions drawn from the source, modeled on the structured summary's Conclusions section. The Summary slide goes near the front of the deck (audience sees the conclusions first, then the evidence); the Conclusions slide at the back closes the deck (same content, restated after the findings). Skip the Summary slide when the source has no clear conclusions, when the conclusions are too granular to preview meaningfully, or when the source is short enough that previewing duplicates the closing Conclusions slide.
+4. **Core findings** (one slide per distinct finding in the source). A finding is *distinct* when its magnitude, country, mechanism, or time period differs from every other finding. Count the distinct findings in the source's results section before slide writing; that count is the floor for the findings section. Compressing distinct findings into shared slides is a defect, not the design. One finding per slide, visual-first. **Diagnostic signal:** if the resulting deck has fewer than 8 slides total for an academic paper, working paper, long-form report, or whitepaper, that is a signal of probable under-rendering, not a target. Inspect every Step 0.7 Compress decision and restore distinct findings as their own slides. The deck size is whatever the content requires; the signal is "too few for the source," not "below a numerical floor."
+5. **Application or implications** (case example, exercise connection, or practical interpretation)
+6. **Limitations slide, when appropriate**, titled "Limitations". Include when the source has a substantive Issues or limitations section (for example, from `../summary-academic/SKILL.md` or `../summary-general/SKILL.md`). Format: 2-3 strongest objections, each as "what a skeptic would say / why the concern is reasonable / how it is addressed or acknowledged" (the Limitations Slide Template in `SKILL.md` Content Requirements).
+7. **Conclusions slide, when appropriate**, that summarizes the key conclusions, modeled on the structured summary's Conclusions section. Distinct from Key Takeaways: Conclusions reflects what the source concluded; Takeaways reflects what the audience should remember. Skip when the source has no clear conclusions, when conclusions are obvious from the findings already shown, or when the takeaways slide already covers them. When both a Summary slide (position 3) and a Conclusions slide exist, the two are restatements of the same content bracketing the findings; that is intentional, not a defect.
+8. **Key Takeaways** (numbered list, white background)
+9. **Closing** (dark accent, one sentence the audience should remember)
+
+**No facilitator prompts.** Do not include `\textit{Discuss:}`, `\textit{Activity:}`, `\textit{Reflect:}`, `\textit{Think about:}`, `\textit{Ask the room:}`, or similar facilitator/discussion prompts on any slide. These belong only in the `teaching` (or `lecture`) structure, which loads its own template below. An `mba`/default deck is read by the audience directly and has no facilitator.
+
+### Rules
+
+- Devil's Advocate: carried by the Limitations slide (skeleton item 6); no separate Devil's Advocate slide
+- Code blocks: include only when the source itself is about code or technical workflows
+- Narrative arc: Methodology and Summary first, then evidence; do not open with a definition or agenda slide
+
+---
+
+## Business School Teaching
+
+**Primary examples:** undergraduate business courses, MBA electives and cores, Executive MBA, and executive education. Covers all flavors of business education.
 
 Business school students, typically with some professional context. Ethos is low because credibility is established by position; students aren't evaluating the instructor, they're learning. High pathos through cases, applications, and career relevance. Moderate logos through evidence, frameworks, and data visualizations. Visual-first: default to charts and diagrams over bullet text.
 

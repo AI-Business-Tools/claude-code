@@ -14,7 +14,7 @@ The skill runs four sequential steps without pausing between them:
 
 2. **Summarize.** The skill auto-detects whether the source is academic (peer-reviewed paper, working paper, dissertation, technical report) or general (news, blog, report, interview). It applies the matching summary format and writes a structured summary to `<content_name>_summary.md` as a deliverable alongside the source file. **Reuse pre-flight:** if `<content_name>_summary.md` already exists in the output directory, the skill reuses it and skips regeneration.
 
-3. **Generate Beamer slides.** The skill reads `../beamer/SKILL.md` and the Beamer style guide in full before writing any LaTeX. It applies the full beamer compilation cycle: write, compile (two-pass pdflatex minimum), fix warnings, quality audit via a single merged agent on the sonnet tier, and recompile. Visual representations (TikZ diagrams, tables, charts) are preferred over bullet-heavy text slides. If the user passed an `audience=` parameter (`teaching`, `faculty`, `professional`, `consulting`, or `working`), it is forwarded to the beamer skill to select the matching domain pattern.
+3. **Generate Beamer slides.** The skill reads `../beamer/SKILL.md` and the Beamer style guide in full before writing any LaTeX. It applies the full beamer compilation cycle: write, compile (two-pass pdflatex minimum), fix warnings, quality audit via a single merged agent on a strong model, and recompile. Visual representations (TikZ diagrams, tables, charts) are preferred over bullet-heavy text slides. If the user passed a `structure=` parameter (`mba`, `teaching`, `faculty`, `professional`, `consulting`, or `working`) or a `register=` parameter (`business` or `technical`), they are forwarded to the beamer skill; `audience=` still works as a deprecated alias for `structure=`.
 
 4. **Convert to PPTX (optional).** After confirming with the user, the skill reads `../../style-guides/pptx/style-guide.md` in full, presents a per-slide conversion plan for approval, and generates native PowerPoint objects (shapes, charts, tables) using python-pptx. Image embedding is a last resort only.
 
@@ -85,19 +85,20 @@ Supported input types: `.pdf`, `.md`, `.txt`, `.docx`, `.doc`, `.rtf`, `.tex`, U
 
 **Note on Word and RTF sources:** `textutil` extracts text only. Embedded charts, images, and shapes in the source are not captured and will not appear in the generated deck. If the source has substantive visual content, supply a PDF version of the document instead.
 
-**Optional audience parameter:** Append `audience=teaching|faculty|professional|consulting|working` to the invocation to forward an audience pattern to the beamer skill. If omitted, the beamer skill defaults to teaching lecture.
+**Optional structure and register parameters:** Append `structure=mba|teaching|faculty|professional|consulting|working` to select the deck skeleton, and `register=business|technical` to select the language level; both forward to the beamer skill. If omitted, the beamer skill defaults to `structure=mba` (a research-paper-to-slides skeleton: Title, Methodology, Summary preview, findings, Limitations, Conclusions) with `register=business` (the source's domain jargon translated or glossed for a non-specialist reader). The legacy `audience=` parameter is accepted as a deprecated alias for `structure=`.
 
 ### Dependencies
 
-This skill calls three other skills in sequence:
+This skill calls four other skills in sequence:
 
 | Step | Skill |
 |------|-------|
 | PDF splitting and subagent read | `../split-pdf/SKILL.md` |
+| Structured summary | `../summary-academic/SKILL.md` or `../summary-general/SKILL.md` (auto-detected) |
 | Beamer slide generation | `../beamer/SKILL.md` |
 | PowerPoint conversion | `../../style-guides/pptx/style-guide.md` |
 
-A separate academic summary skill and general summary skill are referenced in Step 2. These are not included in this repository; substitute your own structured summary format or adapt Step 2 to summarize directly using the extraction notes.
+Step 2 auto-detects whether the source is academic or general and applies the matching summary skill from this repository. If you prefer your own summary format, substitute it in Step 2.
 
 ## Output
 
@@ -112,9 +113,9 @@ A separate academic summary skill and general summary skill are referenced in St
 ## Installation
 
 1. Copy `SKILL.md` into `~/.claude/skills/slides-content/SKILL.md`.
-2. Install the three skills this skill calls in sequence: `split-pdf`, `beamer`, and the `style-guides/pptx/` style guide. Each has its own install steps in its README.
+2. Install the skills this skill calls in sequence: `split-pdf`, `summary-academic`, `summary-general`, `beamer`, and the `style-guides/pptx/` style guide. Each has its own install steps in its README.
 3. Confirm Python and TeX Live are available on your `PATH` (used by `split-pdf` and `beamer` respectively).
 4. Restart Claude Code (or run `/skills` to reload).
 5. Trigger by saying "make slides from this paper," "turn this into a deck," or any other phrase listed under Usage.
 
-The skill expects a structured summary format in Step 2. The default summary skills referenced are not included in this repository; either substitute your own summary skill or adapt Step 2 to summarize directly using the extraction notes from `split-pdf`.
+The skill expects a structured summary format in Step 2; the `summary-academic` and `summary-general` skills in this repository provide it. Substitute your own summary skill there if you have one.

@@ -44,6 +44,7 @@ Each skill is a self-contained workflow that Claude Code loads on demand when yo
 | Skill | What It Does |
 |-------|-------------|
 | [skill-audit](skill-audit/) | Audit recent session transcripts for recurring friction, sweep your skill files for a rule stated in more than one place, and recommend conservative, report-only changes |
+| [skill-build](skill-build/) *(multi-file)* | Design and build a new skill from a blank page: survey what exists, interview, get the design approved, build from a template, and check it with a preflight script |
 
 ## Dependencies
 

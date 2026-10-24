@@ -12,6 +12,7 @@ Each skill is a self-contained workflow that Claude Code loads on demand when yo
 | [slides-content](slides-content/) | End-to-end pipeline: source document (PDF, markdown, text) to compiled presentation slides |
 | [diagram-pdf](diagram-pdf/) | Generate standalone TikZ diagrams (pipelines, hierarchies, cycles, hub-and-spoke, thematic) compiled to PDF, with an independent audit agent |
 | [survey-qsf](survey-qsf/) *(multi-file)* | Build a Qualtrics `.qsf` import file from a survey you have written, and read an exported `.qsf` back into editable markdown |
+| [narrated-video](narrated-video/) *(multi-file)* | Build a captioned MP4 video from a slide deck's PDF, narrated by a Gemini text-to-speech voice reading a script you approve before any of it is recorded |
 
 ### Analysis
 
